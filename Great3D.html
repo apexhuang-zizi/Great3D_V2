@@ -5,7 +5,7 @@
     <title>APEX的工业工具 - 三视图建模引擎</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; }
-        #left-panel { width: 420px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; }
+        #left-panel { width: 450px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; transition: width 0.3s; }
         .panel-header { padding: 20px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .tabs { display: flex; background: #222; border-bottom: 1px solid #333; }
         .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-size: 13px; color: #666; transition: 0.2s; }
@@ -13,23 +13,35 @@
         .tab-content { display: none; padding: 20px; flex-grow: 1; overflow-y: auto; }
         .tab-content.active { display: flex; flex-direction: column; }
         
-        /* 画布容器与全屏逻辑 */
+        /* 响应式画布容器，确保 1:1 比例 */
         .canvas-container { width: 100%; aspect-ratio: 1/1; background: #000; border: 1px solid #333; position: relative; margin: 15px 0; display: flex; justify-content: center; align-items: center; border-radius: 8px; transition: all 0.3s; }
-        .canvas-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; border-radius: 0; border: none; margin: 0; background: #0a0a0a; }
         
-        /* 使用 CSS 控制内部元素铺满，配合 JS 获取真实物理尺寸计算缩放比 */
+        /* 全屏模式下的强制铺满与层级覆盖 */
+        .canvas-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; border-radius: 0; border: none; margin: 0; background: #0a0a0a; }
+        .canvas-container.fullscreen canvas, .canvas-container.fullscreen .bg-img { max-height: 95vh; max-width: 95vw; }
+        
         canvas { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; z-index: 2; cursor: crosshair; }
         .bg-img { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; object-fit: contain; opacity: 0.4; pointer-events: none; }
         
-        .max-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: #aaa; border: 1px solid #444; padding: 4px 8px; border-radius: 4px; cursor: pointer; z-index: 10; font-size: 16px; }
+        .max-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #ccc; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; z-index: 10; font-size: 16px; }
         .max-btn:hover { background: #deff9a; color: #000; }
+        
+        /* 浮动工具栏 (全屏时依然可见) */
+        .floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 10; }
         
         .btn { background: #deff9a; color: #000; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
         .btn:hover { background: #c8f582; }
-        .btn-sec { background: #333; color: #ccc; margin-left: 5px; }
+        .btn-sec { background: #333; color: #ccc; }
         .btn-sec:hover { background: #444; color: #fff; }
-        .action-bar { padding: 25px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
         
+        /* 模式切换单选框 */
+        .mode-switch { display: flex; background: #222; border-radius: 6px; overflow: hidden; border: 1px solid #444; }
+        .mode-switch label { padding: 8px 15px; cursor: pointer; font-size: 12px; color: #888; transition: 0.2s; border-right: 1px solid #444; }
+        .mode-switch label:last-child { border-right: none; }
+        .mode-switch input[type="radio"] { display: none; }
+        .mode-switch input[type="radio"]:checked + label { background: #deff9a; color: #000; font-weight: bold; }
+        
+        .action-bar { padding: 25px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
         #right-panel { flex-grow: 1; position: relative; }
         #loading { position: absolute; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; font-weight:bold; color: #deff9a; }
     </style>
@@ -57,27 +69,33 @@
         
         <script>
             const views = ['front', 'top', 'side'];
-            const viewNames = ['主视图 (正向轮廓)', '俯视图 (顶部映射)', '侧视图 (深度截面)'];
             views.forEach((v, i) => {
                 document.write(`
                 <div id="tab-${v}" class="tab-content ${i===0?'active':''}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <button class="btn" onclick="document.getElementById('up-${v}').click()">底图</button>
-                            <input type="file" id="up-${v}" hidden onchange="loadImg(event, '${v}')">
-                        </div>
-                        <div>
-                            <button class="btn btn-sec" onclick="undoPath('${v}')" title="撤销上一点">↶ 退一步</button>
-                            <button class="btn btn-sec" onclick="clearPath('${v}')" title="清空所有点">清空</button>
-                            <button class="btn btn-sec" onclick="closePath('${v}')" style="color:#deff9a;">✓ 闭合</button>
+                        <button class="btn btn-sec" onclick="document.getElementById('up-${v}').click()">📁 导入底图</button>
+                        <input type="file" id="up-${v}" hidden onchange="loadImg(event, '${v}')">
+                        
+                        <div class="mode-switch">
+                            <input type="radio" name="mode-${v}" id="mode-line-${v}" value="line" checked onchange="setMode('${v}', 'line')">
+                            <label for="mode-line-${v}">直线</label>
+                            <input type="radio" name="mode-${v}" id="mode-arc-${v}" value="arc" onchange="setMode('${v}', 'arc')">
+                            <label for="mode-arc-${v}">弧形(贝塞尔)</label>
                         </div>
                     </div>
+                    
                     <div class="canvas-container" id="container-${v}">
                         <button class="max-btn" onclick="toggleMax('${v}')" title="全屏/退出全屏">⛶</button>
                         <img id="img-${v}" class="bg-img">
-                        <canvas id="cv-${v}" width="800" height="800"></canvas>
+                        <canvas id="cv-${v}" width="1000" height="1000"></canvas>
+                        
+                        <div class="floating-tools">
+                            <button class="btn btn-sec" onclick="undoPath('${v}')" title="撤销上一点">↶ 退一步</button>
+                            <button class="btn btn-sec" onclick="clearPath('${v}')">清空</button>
+                            <button class="btn btn-sec" onclick="closePath('${v}')" style="color:#deff9a;">✓ 闭合</button>
+                        </div>
                     </div>
-                    <p style="font-size:11px; color:#555">${viewNames[i]}。支持 Ctrl+V 粘贴图片。</p>
+                    <p style="font-size:11px; color:#555">支持 Ctrl+V 粘贴底图。弧形模式：点击确定端点，移动鼠标调整弧度，再点击确认。</p>
                 </div>
                 `);
             });
@@ -91,6 +109,7 @@
             <button class="btn btn-sec" style="padding:12px" onclick="exportSTL()">导出 STL 模型</button>
         </div>
     </div>
+    
     <div id="right-panel"><div id="loading">COMPUTING...</div><div id="viewport" style="width:100%; height:100%"></div></div>
 
     <script type="module">
@@ -100,100 +119,131 @@
         import { CSG } from 'three-csg-ts';
 
         const views = ['front', 'top', 'side'];
-        const data = { front: { pts: [], done: false }, top: { pts: [], done: false }, side: { pts: [], done: false } };
-        const CV_SIZE = 800; // 画布内部高精度分辨率
+        // 数据结构更新：pts 存储点，drawMode(line/arc)，arcState 用于控制弧形绘制流程
+        const data = { 
+            front: { pts: [], done: false, mode: 'line', arcState: 0, tempArcEnd: null }, 
+            top: { pts: [], done: false, mode: 'line', arcState: 0, tempArcEnd: null }, 
+            side: { pts: [], done: false, mode: 'line', arcState: 0, tempArcEnd: null } 
+        };
+        const CV_SIZE = 1000; // 内部极高分辨率，保证放大后精度
 
-        // ================= 基础交互逻辑 =================
+        // ================= UI 基础控制 =================
         window.switchTab = (v) => {
             document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
             document.querySelector(`.tab[onclick="switchTab('${v}')"]`).classList.add('active');
             document.getElementById(`tab-${v}`).classList.add('active');
         };
 
-        window.toggleMax = (v) => {
-            document.getElementById(`container-${v}`).classList.toggle('fullscreen');
-        };
+        window.toggleMax = (v) => { document.getElementById(`container-${v}`).classList.toggle('fullscreen'); };
+        window.setMode = (v, mode) => { data[v].mode = mode; data[v].arcState = 0; };
 
-        // 图片导入与粘贴接管
+        // ================= 图片粘贴接管 =================
         const handleImgBlob = (blob, v) => {
             const img = document.getElementById(`img-${v}`);
             img.src = URL.createObjectURL(blob); img.style.display = 'block';
         };
         window.loadImg = (e, v) => { if(e.target.files[0]) handleImgBlob(e.target.files[0], v); };
         window.addEventListener('paste', (e) => {
-            const v = document.querySelector('.tab-content.active').id.replace('tab-', '');
+            const activeTab = document.querySelector('.tab-content.active');
+            if(!activeTab) return;
+            const v = activeTab.id.replace('tab-', '');
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let i of items) if (i.type.startsWith('image/')) { handleImgBlob(i.getAsFile(), v); break; }
         });
 
-        // ================= 画布核心引擎 (描点、吸附、预览、撤销) =================
+        // ================= 核心画布引擎 =================
         views.forEach(v => {
             const cv = document.getElementById(`cv-${v}`);
             const ctx = cv.getContext('2d');
-            let mousePos = null; // 记录当前鼠标/吸附位置
+            let mousePos = null; 
 
             const render = () => {
                 ctx.clearRect(0,0,CV_SIZE,CV_SIZE);
-                // 1. 绘制网格与十字轴
+                // 1. 底层参考线
                 ctx.strokeStyle = '#222'; ctx.lineWidth = 1; ctx.beginPath(); 
-                for(let i=0;i<=CV_SIZE;i+=40){ ctx.moveTo(i,0);ctx.lineTo(i,CV_SIZE);ctx.moveTo(0,i);ctx.lineTo(CV_SIZE,i); } ctx.stroke();
+                for(let i=0;i<=CV_SIZE;i+=50){ ctx.moveTo(i,0);ctx.lineTo(i,CV_SIZE);ctx.moveTo(0,i);ctx.lineTo(CV_SIZE,i); } ctx.stroke();
                 ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(CV_SIZE/2,0);ctx.lineTo(CV_SIZE/2,CV_SIZE);ctx.moveTo(0,CV_SIZE/2);ctx.lineTo(CV_SIZE,CV_SIZE/2); ctx.stroke();
                 
                 const pts = data[v].pts;
                 if(pts.length > 0) {
-                    // 2. 绘制已确认的路径
-                    ctx.strokeStyle = '#deff9a'; ctx.lineWidth = 3; ctx.beginPath();
+                    // 2. 绘制确认的实体路径
+                    ctx.strokeStyle = '#deff9a'; ctx.lineWidth = 4; ctx.beginPath();
                     ctx.moveTo(pts[0].cx, pts[0].cy);
-                    pts.forEach(p => ctx.lineTo(p.cx, p.cy));
                     
-                    // 【改良4】: 检查闭合路径，强制将最后一点与第一点相连并填充颜色
-                    if(data[v].done) { 
-                        ctx.lineTo(pts[0].cx, pts[0].cy); 
-                        ctx.fillStyle = 'rgba(222,255,154,0.15)'; ctx.fill(); 
+                    for(let i=1; i<pts.length; i++) {
+                        if(pts[i].type === 'arc') {
+                            ctx.quadraticCurveTo(pts[i].cpx, pts[i].cpy, pts[i].cx, pts[i].cy);
+                        } else {
+                            ctx.lineTo(pts[i].cx, pts[i].cy);
+                        }
                     }
+                    
+                    if(data[v].done) { ctx.lineTo(pts[0].cx, pts[0].cy); ctx.fillStyle = 'rgba(222,255,154,0.15)'; ctx.fill(); }
                     ctx.stroke();
 
-                    // 3. 【改良2】: 动态预览线与智能吸附提示
+                    // 3. 动态交互预览层
                     if(!data[v].done && mousePos) {
-                        ctx.beginPath();
-                        ctx.moveTo(pts[pts.length-1].cx, pts[pts.length-1].cy);
-                        ctx.lineTo(mousePos.cx, mousePos.cy);
+                        const lastP = pts[pts.length-1];
                         
-                        if(mousePos.snapped) {
-                            // 吸附状态：显示青蓝色实线并标注文字
-                            ctx.strokeStyle = '#00ffff'; ctx.setLineDash([]); ctx.stroke();
-                            ctx.fillStyle = '#00ffff'; ctx.font = "20px sans-serif";
-                            ctx.fillText(mousePos.snapped === 'h' ? ' 水平' : ' 垂直', mousePos.cx + 10, mousePos.cy - 10);
-                        } else {
-                            // 自由移动状态：显示黄色虚线
-                            ctx.strokeStyle = '#ffcc00'; ctx.setLineDash([10, 10]); ctx.stroke();
-                            ctx.setLineDash([]); // 恢复实线
+                        if(data[v].mode === 'line') {
+                            // 直线预览与正交吸附
+                            ctx.beginPath(); ctx.moveTo(lastP.cx, lastP.cy); ctx.lineTo(mousePos.cx, mousePos.cy);
+                            if(mousePos.snapped) {
+                                ctx.strokeStyle = '#00ffff'; ctx.setLineDash([]); ctx.stroke();
+                                ctx.fillStyle = '#00ffff'; ctx.font = "24px sans-serif";
+                                ctx.fillText(mousePos.snapped === 'h' ? ' —— 水平' : ' | 垂直', mousePos.cx + 15, mousePos.cy);
+                            } else {
+                                ctx.strokeStyle = '#ffcc00'; ctx.setLineDash([10, 10]); ctx.stroke(); ctx.setLineDash([]);
+                            }
+                        } 
+                        else if (data[v].mode === 'arc') {
+                            // 弧形交互两步走
+                            if(data[v].arcState === 0) {
+                                // 步骤1：选定终点，显示虚线直线预览
+                                ctx.beginPath(); ctx.moveTo(lastP.cx, lastP.cy); ctx.lineTo(mousePos.cx, mousePos.cy);
+                                ctx.strokeStyle = '#ffcc00'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+                                ctx.fillStyle = '#fff'; ctx.fillText('选取终点', mousePos.cx + 10, mousePos.cy - 10);
+                            } else if (data[v].arcState === 1 && data[v].tempArcEnd) {
+                                // 步骤2：确定弧度，显示贝塞尔曲线预览
+                                ctx.beginPath(); ctx.moveTo(lastP.cx, lastP.cy);
+                                ctx.quadraticCurveTo(mousePos.cx, mousePos.cy, data[v].tempArcEnd.cx, data[v].tempArcEnd.cy);
+                                ctx.strokeStyle = '#00ffff'; ctx.setLineDash([]); ctx.stroke();
+                                // 绘制控制柄连线
+                                ctx.beginPath(); ctx.moveTo(lastP.cx, lastP.cy); ctx.lineTo(mousePos.cx, mousePos.cy); ctx.lineTo(data[v].tempArcEnd.cx, data[v].tempArcEnd.cy);
+                                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+                                // 绘制控制柄圆点
+                                ctx.fillStyle = '#ff00ff'; ctx.beginPath(); ctx.arc(mousePos.cx, mousePos.cy, 6, 0, Math.PI*2); ctx.fill();
+                            }
                         }
                     }
 
-                    // 4. 绘制所有节点圆圈
+                    // 4. 绘制关键节点
                     pts.forEach((p, index) => { 
-                        ctx.fillStyle = index === 0 ? '#ff4444' : '#fff'; // 起点标红
-                        ctx.beginPath(); ctx.arc(p.cx, p.cy, 5, 0, Math.PI*2); ctx.fill(); 
+                        ctx.fillStyle = index === 0 ? '#ff4444' : '#fff'; 
+                        ctx.beginPath(); ctx.arc(p.cx, p.cy, 6, 0, Math.PI*2); ctx.fill(); 
                     });
                 }
             };
 
-            // 鼠标移动监听：计算缩放系坐标与正交吸附
+            // 获取绝对一致的缩放坐标
+            const getCanvasCoords = (e) => {
+                const r = cv.getBoundingClientRect();
+                const scale = r.width / CV_SIZE; 
+                return { cx: (e.clientX - r.left) / scale, cy: (e.clientY - r.top) / scale };
+            };
+
             cv.addEventListener('mousemove', (e) => {
                 if(data[v].done || data[v].pts.length === 0) return;
-                const r = cv.getBoundingClientRect();
-                const scale = r.width / CV_SIZE; // 动态计算物理尺寸与画布分辨率的缩放比
-                let cx = (e.clientX - r.left) / scale;
-                let cy = (e.clientY - r.top) / scale;
-
-                // 智能正交吸附逻辑 (阈值设为 15 像素)
-                const lastP = data[v].pts[data[v].pts.length - 1];
-                const snapDist = 15; 
+                let { cx, cy } = getCanvasCoords(e);
                 let snapped = false;
-                
-                if (Math.abs(cx - lastP.cx) < snapDist) { cx = lastP.cx; snapped = 'v'; }
-                else if (Math.abs(cy - lastP.cy) < snapDist) { cy = lastP.cy; snapped = 'h'; }
+
+                // 仅在直线模式，或弧形选取终点时启用正交吸附
+                if(data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) {
+                    const lastP = data[v].pts[data[v].pts.length - 1];
+                    const snapDist = 20; // 吸附像素阈值
+                    if (Math.abs(cx - lastP.cx) < snapDist) { cx = lastP.cx; snapped = 'v'; }
+                    else if (Math.abs(cy - lastP.cy) < snapDist) { cy = lastP.cy; snapped = 'h'; }
+                }
 
                 mousePos = { cx, cy, snapped };
                 render();
@@ -203,54 +253,90 @@
 
             cv.addEventListener('click', (e) => {
                 if(data[v].done) return;
-                // 如果有 mousePos (包含吸附修正后的坐标)，则使用它；否则使用原点
-                let cx, cy;
-                if(mousePos) {
-                    cx = mousePos.cx; cy = mousePos.cy;
+                let { cx, cy } = mousePos ? mousePos : getCanvasCoords(e);
+                const x = cx - CV_SIZE/2, y = CV_SIZE/2 - cy; // Three.js 坐标转换
+
+                if(data[v].pts.length === 0) {
+                    data[v].pts.push({ type: 'start', cx, cy, x, y });
                 } else {
-                    const r = cv.getBoundingClientRect();
-                    const scale = r.width / CV_SIZE;
-                    cx = (e.clientX - r.left) / scale; cy = (e.clientY - r.top) / scale;
+                    if (data[v].mode === 'line') {
+                        data[v].pts.push({ type: 'line', cx, cy, x, y });
+                    } else if (data[v].mode === 'arc') {
+                        if (data[v].arcState === 0) {
+                            // 记录终点，进入选弧度状态
+                            data[v].tempArcEnd = { cx, cy, x, y };
+                            data[v].arcState = 1;
+                        } else {
+                            // 鼠标当前位置作为控制点 (CP)，并提交完整曲线
+                            data[v].pts.push({ 
+                                type: 'arc', 
+                                cx: data[v].tempArcEnd.cx, cy: data[v].tempArcEnd.cy, x: data[v].tempArcEnd.x, y: data[v].tempArcEnd.y,
+                                cpx: cx, cpy: cy, cpx_three: x, cpy_three: y 
+                            });
+                            data[v].arcState = 0;
+                            data[v].tempArcEnd = null;
+                        }
+                    }
                 }
-                
-                // 转换为 Three.js 中心坐标系
-                data[v].pts.push({ cx, cy, x: cx - CV_SIZE/2, y: CV_SIZE/2 - cy });
                 render();
             });
 
-            // 【改良3】: 退一步与清空
-            window.undoPath = (vv) => { if(!data[vv].done && data[vv].pts.length > 0) { data[vv].pts.pop(); render(); } };
-            window.clearPath = (vv) => { data[vv].pts = []; data[vv].done = false; render(); };
+            // 工具栏功能
+            window.undoPath = (vv) => { 
+                if(!data[vv].done && data[vv].pts.length > 0) { 
+                    if(data[vv].arcState === 1) { data[vv].arcState = 0; data[vv].tempArcEnd = null; } 
+                    else { data[vv].pts.pop(); }
+                    render(); 
+                } 
+            };
+            window.clearPath = (vv) => { data[vv].pts = []; data[vv].done = false; data[vv].arcState = 0; render(); };
             window.closePath = (vv) => { if(data[vv].pts.length > 2) { data[vv].done = true; render(); } };
             
             render();
         });
 
-        // ================= Three.js 3D 渲染引擎 =================
+        // ================= Three.js 布尔求交生成 =================
         const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0d0d);
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 5000);
-        camera.position.set(600, 600, 600);
+        camera.position.set(800, 800, 800);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(document.getElementById('viewport').clientWidth, document.getElementById('viewport').clientHeight);
         document.getElementById('viewport').appendChild(renderer.domElement);
         const controls = new OrbitControls(camera, renderer.domElement);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7), new THREE.GridHelper(1000, 50, 0x222222, 0x111111));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7), new THREE.GridHelper(2000, 50, 0x222222, 0x111111));
         const light = new THREE.DirectionalLight(0xffffff, 0.8); light.position.set(200, 500, 200); scene.add(light);
 
         let mesh = null;
         window.runBuild = () => {
-            if(!data.front.done || !data.top.done || !data.side.done) return alert("请确保三个视图都已描绘并【闭合】路径！");
+            if(!data.front.done || !data.top.done || !data.side.done) return alert("生成失败：请确保三个视图的轮廓都已【闭合】！");
             document.getElementById('loading').style.display = 'flex';
+            
             setTimeout(() => {
                 try {
                     if(mesh) scene.remove(mesh);
                     const d = parseFloat(document.getElementById('depth').value);
-                    const make = (pts) => {
-                        const s = new THREE.Shape(pts.map(p => new THREE.Vector2(p.x, p.y)));
-                        const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false });
-                        g.translate(0,0,-d/2); return new THREE.Mesh(g);
+                    
+                    // 将记录的 2D 轨迹转换为 Three.js 的 Shape 对象
+                    const makeShape = (pts) => {
+                        const s = new THREE.Shape();
+                        s.moveTo(pts[0].x, pts[0].y);
+                        for(let i=1; i<pts.length; i++) {
+                            if(pts[i].type === 'arc') {
+                                s.quadraticCurveTo(pts[i].cpx_three, pts[i].cpy_three, pts[i].x, pts[i].y);
+                            } else {
+                                s.lineTo(pts[i].x, pts[i].y);
+                            }
+                        }
+                        // 处理闭合到起点的线
+                        s.lineTo(pts[0].x, pts[0].y);
+                        return s;
                     };
-                    const mF = make(data.front.pts), mT = make(data.top.pts), mS = make(data.side.pts);
+
+                    const extSet = { depth: d, bevelEnabled: false, curveSegments: 32 }; // 增加曲线精度
+                    const mF = new THREE.Mesh(new THREE.ExtrudeGeometry(makeShape(data.front.pts), extSet).translate(0,0,-d/2));
+                    const mT = new THREE.Mesh(new THREE.ExtrudeGeometry(makeShape(data.top.pts), extSet).translate(0,0,-d/2));
+                    const mS = new THREE.Mesh(new THREE.ExtrudeGeometry(makeShape(data.side.pts), extSet).translate(0,0,-d/2));
+                    
                     mT.rotation.x = Math.PI/2; mS.rotation.y = Math.PI/2;
                     [mF, mT, mS].forEach(m => m.updateMatrix());
                     
@@ -258,17 +344,17 @@
                     res = res.intersect(CSG.fromMesh(mS));
                     
                     mesh = CSG.toMesh(res, new THREE.Matrix4(), new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide }));
-                    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+                    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 }));
                     mesh.add(edge); scene.add(mesh);
-                } catch(e) { console.error(e); alert("生成失败，请检查点位是否出现自交叉或不合理的重叠。"); }
+                } catch(e) { console.error(e); alert("生成失败，请检查点位是否出现自交叉或轮廓错位。"); }
                 document.getElementById('loading').style.display = 'none';
-            }, 100);
+            }, 50);
         };
 
         window.exportSTL = () => {
-            if(!mesh) return alert("请先生成模型！");
+            if(!mesh) return alert("请先执行布尔运算生成模型！");
             const blob = new Blob([new STLExporter().parse(mesh)], { type: 'text/plain' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `APEX_MODEL_${Date.now()}.stl`; a.click();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `APEX_PART_${Date.now()}.stl`; a.click();
         };
 
         function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); }
