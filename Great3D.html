@@ -102,6 +102,61 @@
             if(f) { const r = new FileReader(); r.onload = (ev) => document.getElementById(`img-${v}`).src = ev.target.result; r.readAsDataURL(f); }
         };
 
+        // ================= 剪贴板图片粘贴接管 =================
+        // 处理图片 Blob 的通用函数
+        const handleImageBlob = (blob, viewName) => {
+            const url = URL.createObjectURL(blob);
+            const img = document.getElementById(`img-${viewName}`);
+            img.src = url;
+            img.style.display = 'block'; // 确保图片显示
+        };
+
+        // 获取当前正在操作的视图 (front, top, side)
+        const getActiveView = () => {
+            if(document.getElementById('tab-front').classList.contains('active')) return 'front';
+            if(document.getElementById('tab-top').classList.contains('active')) return 'top';
+            return 'side';
+        };
+
+        // 1. 监听全局 Ctrl+V 粘贴
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    handleImageBlob(blob, getActiveView());
+                    e.preventDefault();
+                    break;
+                }
+            }
+        });
+
+        // 2. 监听画布区域右键点击读取剪贴板 (利用 Async Clipboard API)
+        views.forEach(v => {
+            const canvasContainer = document.getElementById(`cv-${v}`).parentElement;
+            canvasContainer.addEventListener('contextmenu', async (e) => {
+                e.preventDefault(); // 阻止浏览器默认右键菜单
+                try {
+                    // 请求读取剪贴板权限并获取内容
+                    const clipboardItems = await navigator.clipboard.read();
+                    for (const clipboardItem of clipboardItems) {
+                        const imageTypes = clipboardItem.types.filter(type => type.startsWith('image/'));
+                        if (imageTypes.length > 0) {
+                            const blob = await clipboardItem.getType(imageTypes[0]);
+                            handleImageBlob(blob, v);
+                            return; 
+                        }
+                    }
+                    console.log("剪贴板中没有找到图片");
+                } catch (err) {
+                    console.error("读取剪贴板失败:", err);
+                    alert("无法读取剪贴板。请确保您已在浏览器中允许该网页读取剪贴板权限，或者直接使用快捷键 Ctrl+V 进行粘贴。");
+                }
+            });
+        });
+        // =======================================================
+        
         views.forEach(v => {
             const cv = document.getElementById(`cv-${v}`);
             const ctx = cv.getContext('2d');
