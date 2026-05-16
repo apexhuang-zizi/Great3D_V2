@@ -3,210 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kingwood Vietnam - 工业建模与智能制造平台</title>
+    <title>APEX的工业工具 - 个人工作台</title>
     <style>
-        :root {
-            --primary-color: #005A9C;
-            --bg-color: #f4f7f6;
-            --text-color: #333;
-            --card-bg: #fff;
-        }
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        /* Login Container */
-        #login-container {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: 350px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        #login-container h2 {
-            margin-bottom: 20px;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-        .input-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #666;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #00447a;
-        }
+        :root { --primary-color: #deff9a; --bg-color: #0d0d0d; --card-bg: #1a1a1a; --text-color: #e0e0e0; }
+        body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #login-container { background: var(--card-bg); padding: 45px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 380px; text-align: center; border: 1px solid #333; }
+        h2 { margin-bottom: 10px; color: var(--primary-color); letter-spacing: 1px; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 13px; color: #888; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: 12px; background: #252525; border: 1px solid #444; border-radius: 8px; color: #fff; box-sizing: border-box; outline: none; }
+        .input-group input:focus { border-color: var(--primary-color); }
+        button { width: 100%; padding: 14px; background: var(--primary-color); color: #000; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: transform 0.2s; }
+        button:hover { transform: scale(1.02); background: #c8f582; }
         
-        /* Dashboard Container */
-        #dashboard-container {
-            display: none;
-            width: 100%;
-            height: 100vh;
-            flex-direction: column;
-        }
-        header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .user-info {
-            font-size: 14px;
-        }
-        .main-content {
-            padding: 40px;
-            flex-grow: 1;
-            background-color: var(--bg-color);
-        }
-        .module-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .module-card {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 30px 20px;
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            cursor: pointer;
-            border-top: 4px solid transparent;
-            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-        }
-        .module-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            border-color: var(--primary-color);
-        }
-        .module-card h3 {
-            margin: 10px 0;
-            color: #222;
-        }
-        .module-card p {
-            font-size: 14px;
-            color: #777;
-        }
-        .disabled-card {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .disabled-card:hover {
-            transform: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            border-color: transparent;
-        }
-        .icon-placeholder {
-            font-size: 40px;
-            color: var(--primary-color);
-            margin-bottom: 15px;
-        }
+        #dashboard-container { display: none; width: 100%; height: 100vh; flex-direction: column; }
+        header { background: #000; padding: 25px 50px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .main-content { padding: 60px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+        .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
+        .module-card { background: var(--card-bg); border-radius: 15px; padding: 40px 30px; text-align: center; cursor: pointer; border: 1px solid #333; transition: all 0.3s; position: relative; overflow: hidden; }
+        .module-card:hover { border-color: var(--primary-color); background: #222; transform: translateY(-5px); }
+        .module-card h3 { color: #fff; margin: 15px 0 10px; }
+        .module-card p { font-size: 14px; color: #888; line-height: 1.5; }
+        .disabled { opacity: 0.4; cursor: not-allowed; }
     </style>
 </head>
 <body>
-
-    <!-- 登录界面 -->
     <div id="login-container">
-        <h2>Kingwood 工业系统</h2>
-        <p style="color: #888; font-size: 13px; margin-bottom: 25px;">系统认证</p>
+        <h2>APEX'S TOOLBOX</h2>
+        <p style="color: #666; font-size: 12px; margin-bottom: 30px;">PERSONAL INDUSTRIAL SUITE</p>
         <div class="input-group">
-            <label for="username">员工账号</label>
-            <input type="text" id="username" placeholder="输入账号" value="admin">
+            <label>ID</label>
+            <input type="text" id="username" value="APEX">
         </div>
         <div class="input-group">
-            <label for="password">密码</label>
-            <input type="password" id="password" placeholder="输入密码" value="123456">
+            <label>PASS</label>
+            <input type="password" id="password" value="******">
         </div>
-        <button onclick="login()">登 录</button>
+        <button onclick="login()">进入控制台</button>
     </div>
 
-    <!-- 模块选择大厅 -->
     <div id="dashboard-container">
         <header>
-            <h2>Kingwood 智能制造与工程协作平台</h2>
-            <div class="user-info">
-                <span>欢迎您，<strong id="display-user">工程师</strong></span> | 
-                <a href="#" onclick="logout()" style="color: #ddd; text-decoration: none; margin-left: 10px;">退出登录</a>
-            </div>
+            <h2 style="margin:0; font-size: 20px;">APEX 工业套件</h2>
+            <div style="font-size:13px; color:#666">PERSONAL USE ONLY | <a href="#" onclick="logout()" style="color:var(--primary-color); text-decoration:none">EXIT</a></div>
         </header>
         <div class="main-content">
-            <h3 style="margin-bottom: 30px; color: #444; max-width: 1200px; margin-left: auto; margin-right: auto;">请选择功能模块</h3>
             <div class="module-grid">
-                <!-- 模块1：三视图转3D -->
                 <div class="module-card" onclick="window.location.href='Great3D.html'">
-                    <div class="icon-placeholder">🧊</div>
-                    <h3>三视图转 3D 实体</h3>
-                    <p>导入正交视图，基于描点求交算法自动生成水密性 STL 模型。</p>
+                    <div style="font-size:40px">🧊</div>
+                    <h3>三视图建模</h3>
+                    <p>导入正交工程图，通过手动描点实现高精度 3D 轮廓推导与布尔相交建模。</p>
                 </div>
-
-                <!-- 模块2：预留功能 -->
-                <div class="module-card disabled-card" onclick="alert('该模块正在开发中，敬请期待！')">
-                    <div class="icon-placeholder">⚙️</div>
-                    <h3>工艺图谱分析</h3>
-                    <p>基于 AI 视觉识别的 CAD 图纸标注自动提取系统。(预留)</p>
+                <div class="module-card disabled">
+                    <div style="font-size:40px">🔍</div>
+                    <h3>标注识别 (待开发)</h3>
+                    <p>利用计算机视觉技术自动提取图纸尺寸与标注数据。</p>
                 </div>
-
-                <!-- 模块3：预留功能 -->
-                <div class="module-card disabled-card" onclick="alert('该模块正在开发中，敬请期待！')">
-                    <div class="icon-placeholder">📊</div>
-                    <h3>生产排期与报表</h3>
-                    <p>联动车间设备数据与人员调度系统的可视化面板。(预留)</p>
+                <div class="module-card disabled">
+                    <div style="font-size:40px">📊</div>
+                    <h3>工具看板 (预留)</h3>
+                    <p>用于汇总个人开发流程与 3D 打印排期的可视化面板。</p>
                 </div>
             </div>
         </div>
     </div>
-
     <script>
-        function login() {
-            const user = document.getElementById('username').value;
-            if(user.trim() !== '') {
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard-container').style.display = 'flex';
-                document.getElementById('display-user').innerText = user;
-            } else {
-                alert('请输入账号');
-            }
-        }
-
-        function logout() {
-            document.getElementById('dashboard-container').style.display = 'none';
-            document.getElementById('login-container').style.display = 'block';
-        }
+        function login() { document.getElementById('login-container').style.display='none'; document.getElementById('dashboard-container').style.display='flex'; }
+        function logout() { location.reload(); }
     </script>
 </body>
 </html>
+
+### 2. `Great3D.html` (核心建模引擎)
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>APEX的工业工具 - 三视图建模引擎</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; }
+        #left-panel { width: 420px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; }
+        .panel-header { padding: 20px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .tabs { display: flex; background: #222; border-bottom: 1px solid #333; }
+        .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-size: 13px; color: #666; transition: 0.2s; }
+        .tab.active { color: #deff9a; background: #1a1a1a; border-bottom: 2px solid #deff9a; }
+        .tab-content { display: none; padding: 20px; flex-grow: 1; overflow-y: auto; }
+        .tab-content.active { display: flex; flex-direction: column; }
+        .canvas-container { width: 100%; height: 380px; background: #000; border: 1px solid #333; position: relative; margin: 15px 0; display: flex; justify-content: center; align-items: center; border-radius: 8px; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 2; }
+        .bg-img { position: absolute; max-width: 100%; max-height: 100%; opacity: 0.4; pointer-events: none; }
+        .btn { background: #deff9a; color: #000; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .btn:hover { background: #c8f582; }
+        .btn-sec { background: #333; color: #ccc; margin-left: 5px; }
+        .action-bar { padding: 25px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
+        #right-panel { flex-grow: 1; position: relative; }
+        #loading { position: absolute; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; font-weight:bold; color: #deff9a; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://esm.sh/three@0.160.0",
+                "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
+                "three-csg-ts": "https://esm.sh/three-csg-ts@3.1.11?external=three"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="left-panel">
+        <div class="panel-header">
+            <h3 style="margin:0; font-size:16px; color:#deff9a">APEX 3D ENGINE</h3>
+            <a href="index.html" style="color:#666; text-decoration:none; font-size:12px">← BACK</a>
+        </div>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('front')">主视 (XY)</div>
+            <div class="tab" onclick="switchTab('top')">俯视 (XZ)</div>
+            <div class="tab" onclick="switchTab('side')">侧视 (YZ)</div>
+        </div>
+        <div id="tab-front" class="tab-content active">
+            <div style="display:flex; gap:8px">
+                <button class="btn" onclick="document.getElementById('up-front').click()">导入底图</button>
+                <input type="file" id="up-front" hidden onchange="loadImg(event, 'front')">
+                <button class="btn btn-sec" onclick="resetView('front')">重置描点</button>
+                <button class="btn btn-sec" onclick="closePath('front')">闭合路径</button>
+            </div>
+            <div class="canvas-container"><img id="img-front" class="bg-img"><canvas id="cv-front" width="380" height="380"></canvas></div>
+            <p style="font-size:11px; color:#555">主视图决定了模型的正向轮廓。</p>
+        </div>
+        <div id="tab-top" class="tab-content">
+            <div style="display:flex; gap:8px">
+                <button class="btn" onclick="document.getElementById('up-top').click()">导入底图</button>
+                <input type="file" id="up-top" hidden onchange="loadImg(event, 'top')">
+                <button class="btn btn-sec" onclick="resetView('top')">重置描点</button>
+                <button class="btn btn-sec" onclick="closePath('top')">闭合路径</button>
+            </div>
+            <div class="canvas-container"><img id="img-top" class="bg-img"><canvas id="cv-top" width="380" height="380"></canvas></div>
+        </div>
+        <div id="tab-side" class="tab-content">
+            <div style="display:flex; gap:8px">
+                <button class="btn" onclick="document.getElementById('up-side').click()">导入底图</button>
+                <input type="file" id="up-side" hidden onchange="loadImg(event, 'side')">
+                <button class="btn btn-sec" onclick="resetView('side')">重置描点</button>
+                <button class="btn btn-sec" onclick="closePath('side')">闭合路径</button>
+            </div>
+            <div class="canvas-container"><img id="img-side" class="bg-img"><canvas id="cv-side" width="380" height="380"></canvas></div>
+        </div>
+        <div class="action-bar">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#888">
+                拉伸深度: <input type="number" id="depth" value="600" style="background:#000; color:#deff9a; border:1px solid #333; padding:5px; width:60px">
+            </div>
+            <button class="btn" style="padding:15px" onclick="runBuild()">执行布尔交集运算</button>
+            <button class="btn btn-sec" style="padding:12px" onclick="exportSTL()">导出 STL 模型</button>
+        </div>
+    </div>
+    <div id="right-panel"><div id="loading">COMPUTING...</div><div id="viewport" style="width:100%; height:100%"></div></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+        import { CSG } from 'three-csg-ts';
+
+        const views = ['front', 'top', 'side'];
+        const data = { front: { pts: [], done: false }, top: { pts: [], done: false }, side: { pts: [], done: false } };
+
+        // 交互逻辑
+        window.switchTab = (v) => {
+            document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${v}')"]`).classList.add('active');
+            document.getElementById(`tab-${v}`).classList.add('active');
+        };
+
+        window.loadImg = (e, v) => {
+            const f = e.target.files[0];
+            if(f) { const r = new FileReader(); r.onload = (ev) => document.getElementById(`img-${v}`).src = ev.target.result; r.readAsDataURL(f); }
+        };
+
+        views.forEach(v => {
+            const cv = document.getElementById(`cv-${v}`);
+            const ctx = cv.getContext('2d');
+            const render = () => {
+                ctx.clearRect(0,0,380,380);
+                // 辅助网格
+                ctx.strokeStyle = '#222'; ctx.beginPath(); 
+                for(let i=0;i<=380;i+=20){ ctx.moveTo(i,0);ctx.lineTo(i,380);ctx.moveTo(0,i);ctx.lineTo(380,i); } ctx.stroke();
+                // 轴
+                ctx.strokeStyle = '#444'; ctx.beginPath(); ctx.moveTo(190,0);ctx.lineTo(190,380);ctx.moveTo(0,190);ctx.lineTo(380,190); ctx.stroke();
+                
+                if(data[v].pts.length > 0) {
+                    ctx.strokeStyle = '#deff9a'; ctx.lineWidth = 2; ctx.beginPath();
+                    ctx.moveTo(data[v].pts[0].cx, data[v].pts[0].cy);
+                    data[v].pts.forEach(p => ctx.lineTo(p.cx, p.cy));
+                    if(data[v].done) { ctx.closePath(); ctx.fillStyle = 'rgba(222,255,154,0.1)'; ctx.fill(); }
+                    ctx.stroke();
+                    data[v].pts.forEach(p => { ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(p.cx, p.cy, 3, 0, Math.PI*2); ctx.fill(); });
+                }
+            };
+            cv.onclick = (e) => {
+                if(data[v].done) return;
+                const r = cv.getBoundingClientRect();
+                const cx = e.clientX - r.left, cy = e.clientY - r.top;
+                data[v].pts.push({ cx, cy, x: cx - 190, y: 190 - cy });
+                render();
+            };
+            window[`resetView` + v] = () => { data[v].pts = []; data[v].done = false; render(); }; // 简化
+            window.resetView = (vv) => { data[vv].pts = []; data[vv].done = false; render(); };
+            window.closePath = (vv) => { data[vv].done = true; render(); };
+            render();
+        });
+
+        // 3D 渲染引擎
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0d0d);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 5000);
+        camera.position.set(400, 400, 400);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(document.getElementById('viewport').clientWidth, document.getElementById('viewport').clientHeight);
+        document.getElementById('viewport').appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7), new THREE.GridHelper(1000, 50, 0x222222, 0x111111));
+        const light = new THREE.DirectionalLight(0xffffff, 0.8); light.position.set(200, 500, 200); scene.add(light);
+
+        let mesh = null;
+        window.runBuild = () => {
+            if(!data.front.done || !data.top.done || !data.side.done) return alert("请闭合所有视图路径！");
+            document.getElementById('loading').style.display = 'flex';
+            setTimeout(() => {
+                try {
+                    if(mesh) scene.remove(mesh);
+                    const d = parseFloat(document.getElementById('depth').value);
+                    const make = (pts) => {
+                        const s = new THREE.Shape(pts.map(p => new THREE.Vector2(p.x, p.y)));
+                        const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false });
+                        g.translate(0,0,-d/2); return new THREE.Mesh(g);
+                    };
+                    const mF = make(data.front.pts), mT = make(data.top.pts), mS = make(data.side.pts);
+                    mT.rotation.x = Math.PI/2; mS.rotation.y = Math.PI/2;
+                    [mF, mT, mS].forEach(m => m.updateMatrix());
+                    let res = CSG.fromMesh(mF).intersect(CSG.fromMesh(mT));
+                    res = res.intersect(CSG.fromMesh(mS));
+                    mesh = CSG.toMesh(res, new THREE.Matrix4(), new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide }));
+                    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+                    mesh.add(edge); scene.add(mesh);
+                } catch(e) { console.error(e); alert("生成失败，请检查点位。"); }
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
+        };
+
+        window.exportSTL = () => {
+            if(!mesh) return alert("请先生成模型");
+            const blob = new Blob([new STLExporter().parse(mesh)], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `APEX_MODEL_${Date.now()}.stl`; a.click();
+        };
+
+        function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); }
+        ani();
+        window.onresize = () => {
+            const w = document.getElementById('viewport').clientWidth, h = document.getElementById('viewport').clientHeight;
+            camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+        };
+    </script>
+</body>
+</html>
+
+希望这份“APEX 工业工具”套件能完美适配您的个人开发流程！简报已为您整理好，代码已针对您的使用习惯进行了极致精简与逻辑优化。如有进一步的模块增加需求，随时告诉我。
