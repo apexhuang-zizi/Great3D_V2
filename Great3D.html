@@ -2,131 +2,25 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三视图转 3D 实体引擎 - 交互描点版</title>
+    <title>APEX的工业工具 - 三视图建模引擎</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            display: flex;
-            height: 100vh;
-            background-color: #1e1e1e;
-            color: #fff;
-        }
-        /* 左侧面板 */
-        #left-panel {
-            width: 400px;
-            background: #252526;
-            border-right: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-            z-index: 10;
-        }
-        .panel-header {
-            padding: 15px 20px;
-            background: #333333;
-            border-bottom: 1px solid #444;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .panel-header h2 { margin: 0; font-size: 16px; color: #e0e0e0;}
-        .back-btn { color: #aaa; text-decoration: none; font-size: 14px; }
-        .back-btn:hover { color: #fff; }
-
-        /* 标签页导航 */
-        .tabs {
-            display: flex;
-            background: #2d2d2d;
-            border-bottom: 1px solid #444;
-        }
-        .tab {
-            flex: 1;
-            text-align: center;
-            padding: 10px 0;
-            cursor: pointer;
-            font-size: 14px;
-            color: #888;
-            border-bottom: 2px solid transparent;
-        }
-        .tab.active {
-            color: #007acc;
-            border-bottom: 2px solid #007acc;
-            background: #252526;
-        }
-
-        /* 视图内容区 */
-        .tab-content {
-            display: none;
-            flex-direction: column;
-            padding: 15px;
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-        .tab-content.active { display: flex; }
-
-        .toolbar { margin-bottom: 10px; display: flex; gap: 10px; }
-        .btn {
-            background: #007acc; color: white; border: none;
-            padding: 6px 12px; border-radius: 4px; cursor: pointer;
-            font-size: 12px; flex: 1;
-        }
-        .btn:hover { background: #005999; }
-        .btn-secondary { background: #444; }
-        .btn-secondary:hover { background: #555; }
-        
-        .canvas-container {
-            width: 100%;
-            height: 350px;
-            background: #111;
-            border: 1px dashed #555;
-            position: relative;
-            margin-bottom: 15px;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        canvas {
-            cursor: crosshair;
-            position: absolute;
-            top: 0; left: 0;
-            z-index: 2;
-        }
-        .bg-image {
-            position: absolute;
-            max-width: 100%; max-height: 100%;
-            opacity: 0.5; z-index: 1; pointer-events: none;
-        }
-        
-        .tips { font-size: 12px; color: #aaa; margin-bottom: 10px; line-height: 1.5; }
-
-        /* 底部操作区 */
-        .action-area {
-            padding: 20px;
-            background: #2d2d2d;
-            border-top: 1px solid #444;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .generate-btn {
-            background: #28a745; font-size: 16px; padding: 12px; font-weight: bold;
-        }
-        .generate-btn:hover { background: #218838; }
-
-        /* 右侧 3D 渲染区 */
-        #right-panel {
-            flex-grow: 1;
-            position: relative;
-        }
-        #loading-mask {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
-            z-index: 20; color: white; font-size: 18px;
-        }
+        body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; }
+        #left-panel { width: 420px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; }
+        .panel-header { padding: 20px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .tabs { display: flex; background: #222; border-bottom: 1px solid #333; }
+        .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-size: 13px; color: #666; transition: 0.2s; }
+        .tab.active { color: #deff9a; background: #1a1a1a; border-bottom: 2px solid #deff9a; }
+        .tab-content { display: none; padding: 20px; flex-grow: 1; overflow-y: auto; }
+        .tab-content.active { display: flex; flex-direction: column; }
+        .canvas-container { width: 100%; height: 380px; background: #000; border: 1px solid #333; position: relative; margin: 15px 0; display: flex; justify-content: center; align-items: center; border-radius: 8px; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 2; }
+        .bg-img { position: absolute; max-width: 100%; max-height: 100%; opacity: 0.4; pointer-events: none; }
+        .btn { background: #deff9a; color: #000; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .btn:hover { background: #c8f582; }
+        .btn-sec { background: #333; color: #ccc; margin-left: 5px; }
+        .action-bar { padding: 25px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
+        #right-panel { flex-grow: 1; position: relative; }
+        #loading { position: absolute; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; font-weight:bold; color: #deff9a; }
     </style>
     <script type="importmap">
         {
@@ -139,80 +33,53 @@
     </script>
 </head>
 <body>
-
-    <!-- 左侧交互面板 -->
     <div id="left-panel">
         <div class="panel-header">
-            <h2>实体生成器 (CSG)</h2>
-            <a href="index.html" class="back-btn">← 返回大厅</a>
+            <h3 style="margin:0; font-size:16px; color:#deff9a">APEX 3D ENGINE</h3>
+            <a href="index.html" style="color:#666; text-decoration:none; font-size:12px">← BACK</a>
         </div>
-
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('front')">主视图 (XY)</div>
-            <div class="tab" onclick="switchTab('top')">俯视图 (XZ)</div>
-            <div class="tab" onclick="switchTab('side')">左视图 (YZ)</div>
+            <div class="tab active" onclick="switchTab('front')">主视 (XY)</div>
+            <div class="tab" onclick="switchTab('top')">俯视 (XZ)</div>
+            <div class="tab" onclick="switchTab('side')">侧视 (YZ)</div>
         </div>
-
-        <!-- 主视图 -->
         <div id="tab-front" class="tab-content active">
-            <div class="tips">1. 点击上传底图；2. 在网格上点击描绘轮廓；3. 点击闭合图形。</div>
-            <div class="toolbar">
-                <input type="file" id="upload-front" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'front')">
-                <button class="btn" onclick="document.getElementById('upload-front').click()">上传底图</button>
-                <button class="btn btn-secondary" onclick="clearPoints('front')">清空点位</button>
-                <button class="btn btn-secondary" onclick="closeShape('front')">闭合图形</button>
+            <div style="display:flex; gap:8px">
+                <button class="btn" onclick="document.getElementById('up-front').click()">导入底图</button>
+                <input type="file" id="up-front" hidden onchange="loadImg(event, 'front')">
+                <button class="btn btn-sec" onclick="resetView('front')">重置描点</button>
+                <button class="btn btn-sec" onclick="closePath('front')">闭合路径</button>
             </div>
-            <div class="canvas-container" id="container-front">
-                <img id="img-front" class="bg-image" style="display:none">
-                <canvas id="canvas-front" width="370" height="350"></canvas>
-            </div>
+            <div class="canvas-container"><img id="img-front" class="bg-img"><canvas id="cv-front" width="380" height="380"></canvas></div>
+            <p style="font-size:11px; color:#555">主视图决定了模型的正向轮廓。</p>
         </div>
-
-        <!-- 俯视图 -->
         <div id="tab-top" class="tab-content">
-            <div class="tips">描绘俯视图轮廓，生成后将映射至 XZ 平面。</div>
-            <div class="toolbar">
-                <input type="file" id="upload-top" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'top')">
-                <button class="btn" onclick="document.getElementById('upload-top').click()">上传底图</button>
-                <button class="btn btn-secondary" onclick="clearPoints('top')">清空点位</button>
-                <button class="btn btn-secondary" onclick="closeShape('top')">闭合图形</button>
+            <div style="display:flex; gap:8px">
+                <button class="btn" onclick="document.getElementById('up-top').click()">导入底图</button>
+                <input type="file" id="up-top" hidden onchange="loadImg(event, 'top')">
+                <button class="btn btn-sec" onclick="resetView('top')">重置描点</button>
+                <button class="btn btn-sec" onclick="closePath('top')">闭合路径</button>
             </div>
-            <div class="canvas-container" id="container-top">
-                <img id="img-top" class="bg-image" style="display:none">
-                <canvas id="canvas-top" width="370" height="350"></canvas>
-            </div>
+            <div class="canvas-container"><img id="img-top" class="bg-img"><canvas id="cv-top" width="380" height="380"></canvas></div>
         </div>
-
-        <!-- 左视图 -->
         <div id="tab-side" class="tab-content">
-            <div class="tips">描绘左侧剖面轮廓，生成后将映射至 YZ 平面。</div>
-            <div class="toolbar">
-                <input type="file" id="upload-side" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'side')">
-                <button class="btn" onclick="document.getElementById('upload-side').click()">上传底图</button>
-                <button class="btn btn-secondary" onclick="clearPoints('side')">清空点位</button>
-                <button class="btn btn-secondary" onclick="closeShape('side')">闭合图形</button>
+            <div style="display:flex; gap:8px">
+                <button class="btn" onclick="document.getElementById('up-side').click()">导入底图</button>
+                <input type="file" id="up-side" hidden onchange="loadImg(event, 'side')">
+                <button class="btn btn-sec" onclick="resetView('side')">重置描点</button>
+                <button class="btn btn-sec" onclick="closePath('side')">闭合路径</button>
             </div>
-            <div class="canvas-container" id="container-side">
-                <img id="img-side" class="bg-image" style="display:none">
-                <canvas id="canvas-side" width="370" height="350"></canvas>
-            </div>
+            <div class="canvas-container"><img id="img-side" class="bg-img"><canvas id="cv-side" width="380" height="380"></canvas></div>
         </div>
-
-        <div class="action-area">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <label style="font-size: 12px; color: #aaa;">拉伸深度设置:</label>
-                <input type="number" id="extrude-depth" value="500" style="width: 80px; background: #111; color: #fff; border: 1px solid #444; padding: 4px; text-align: center;">
+        <div class="action-bar">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#888">
+                拉伸深度: <input type="number" id="depth" value="600" style="background:#000; color:#deff9a; border:1px solid #333; padding:5px; width:60px">
             </div>
-            <button class="btn generate-btn" onclick="generate3D()">执行空间相交运算 ⚡</button>
-            <button class="btn" id="export-btn" style="background:#5c2d91;">导出 STL 打印文件</button>
+            <button class="btn" style="padding:15px" onclick="runBuild()">执行布尔交集运算</button>
+            <button class="btn btn-sec" style="padding:12px" onclick="exportSTL()">导出 STL 模型</button>
         </div>
     </div>
-
-    <!-- 右侧 3D 渲染区 -->
-    <div id="right-panel">
-        <div id="loading-mask">正在进行布尔运算...</div>
-        <div id="3d-viewport"></div>
-    </div>
+    <div id="right-panel"><div id="loading">COMPUTING...</div><div id="viewport" style="width:100%; height:100%"></div></div>
 
     <script type="module">
         import * as THREE from 'three';
@@ -220,261 +87,103 @@
         import { STLExporter } from 'three/addons/exporters/STLExporter.js';
         import { CSG } from 'three-csg-ts';
 
-        // ================= 数据状态管理 =================
-        window.shapeData = {
-            front: { points: [], closed: false },
-            top: { points: [], closed: false },
-            side: { points: [], closed: false }
+        const views = ['front', 'top', 'side'];
+        const data = { front: { pts: [], done: false }, top: { pts: [], done: false }, side: { pts: [], done: false } };
+
+        // 交互逻辑
+        window.switchTab = (v) => {
+            document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${v}')"]`).classList.add('active');
+            document.getElementById(`tab-${v}`).classList.add('active');
         };
 
-        // ================= 视图切换逻辑 =================
-        window.switchTab = function(viewName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('tab-' + viewName).classList.add('active');
-        }
+        window.loadImg = (e, v) => {
+            const f = e.target.files[0];
+            if(f) { const r = new FileReader(); r.onload = (ev) => document.getElementById(`img-${v}`).src = ev.target.result; r.readAsDataURL(f); }
+        };
 
-        // ================= Canvas 描点交互逻辑 =================
-        function initCanvas(viewName) {
-            const canvas = document.getElementById('canvas-' + viewName);
-            const ctx = canvas.getContext('2d');
-            
-            // 绘制网格背景
-            function drawGrid() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < canvas.width; i += 20) {
-                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                }
-                for (let i = 0; i < canvas.height; i += 20) {
-                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-                }
-                // 画中心十字轴
-                ctx.strokeStyle = '#666';
-                ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, canvas.height/2); ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
-            }
-
-            // 绘制点和连线
-            function drawShape() {
-                drawGrid();
-                const pts = window.shapeData[viewName].points;
-                if(pts.length === 0) return;
-
-                ctx.strokeStyle = '#00ff88';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
+        views.forEach(v => {
+            const cv = document.getElementById(`cv-${v}`);
+            const ctx = cv.getContext('2d');
+            const render = () => {
+                ctx.clearRect(0,0,380,380);
+                // 辅助网格
+                ctx.strokeStyle = '#222'; ctx.beginPath(); 
+                for(let i=0;i<=380;i+=20){ ctx.moveTo(i,0);ctx.lineTo(i,380);ctx.moveTo(0,i);ctx.lineTo(380,i); } ctx.stroke();
+                // 轴
+                ctx.strokeStyle = '#444'; ctx.beginPath(); ctx.moveTo(190,0);ctx.lineTo(190,380);ctx.moveTo(0,190);ctx.lineTo(380,190); ctx.stroke();
                 
-                // 将 Three.js 坐标转换回 Canvas 坐标进行绘制
-                const toCanvasX = (x) => x + canvas.width / 2;
-                const toCanvasY = (y) => canvas.height / 2 - y;
-
-                ctx.moveTo(toCanvasX(pts[0].x), toCanvasY(pts[0].y));
-                for(let i=1; i<pts.length; i++) {
-                    ctx.lineTo(toCanvasX(pts[i].x), toCanvasY(pts[i].y));
+                if(data[v].pts.length > 0) {
+                    ctx.strokeStyle = '#deff9a'; ctx.lineWidth = 2; ctx.beginPath();
+                    ctx.moveTo(data[v].pts[0].cx, data[v].pts[0].cy);
+                    data[v].pts.forEach(p => ctx.lineTo(p.cx, p.cy));
+                    if(data[v].done) { ctx.closePath(); ctx.fillStyle = 'rgba(222,255,154,0.1)'; ctx.fill(); }
+                    ctx.stroke();
+                    data[v].pts.forEach(p => { ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(p.cx, p.cy, 3, 0, Math.PI*2); ctx.fill(); });
                 }
-                
-                if(window.shapeData[viewName].closed) {
-                    ctx.closePath();
-                    ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
-                    ctx.fill();
-                }
-                ctx.stroke();
+            };
+            cv.onclick = (e) => {
+                if(data[v].done) return;
+                const r = cv.getBoundingClientRect();
+                const cx = e.clientX - r.left, cy = e.clientY - r.top;
+                data[v].pts.push({ cx, cy, x: cx - 190, y: 190 - cy });
+                render();
+            };
+            window[`resetView` + v] = () => { data[v].pts = []; data[v].done = false; render(); }; // 简化
+            window.resetView = (vv) => { data[vv].pts = []; data[vv].done = false; render(); };
+            window.closePath = (vv) => { data[vv].done = true; render(); };
+            render();
+        });
 
-                // 画圆点
-                ctx.fillStyle = '#fff';
-                pts.forEach(p => {
-                    ctx.beginPath();
-                    ctx.arc(toCanvasX(p.x), toCanvasY(p.y), 3, 0, Math.PI*2);
-                    ctx.fill();
-                });
-            }
-
-            drawGrid();
-
-            // 鼠标点击事件提取坐标
-            canvas.addEventListener('mousedown', function(e) {
-                if(window.shapeData[viewName].closed) return;
-                
-                const rect = canvas.getBoundingClientRect();
-                const clientX = e.clientX - rect.left;
-                const clientY = e.clientY - rect.top;
-
-                // 核心：将 Canvas 坐标转换为以中心为原点，Y轴向上的坐标
-                const threeX = clientX - canvas.width / 2;
-                const threeY = canvas.height / 2 - clientY;
-
-                window.shapeData[viewName].points.push(new THREE.Vector2(threeX, threeY));
-                drawShape();
-            });
-
-            // 暴露方法到全局供按钮调用
-            window.clearPoints = function(v) {
-                if(v === viewName) {
-                    window.shapeData[v].points = [];
-                    window.shapeData[v].closed = false;
-                    drawShape();
-                }
-            }
-            window.closeShape = function(v) {
-                if(v === viewName && window.shapeData[v].points.length > 2) {
-                    window.shapeData[v].closed = true;
-                    drawShape();
-                }
-            }
-        }
-
-        initCanvas('front');
-        initCanvas('top');
-        initCanvas('side');
-
-        window.handleImageUpload = function(event, viewName) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('img-' + viewName);
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-
-        // ================= Three.js 3D 渲染核心 =================
-        const rightPanel = document.getElementById('right-panel');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x2d2d2d);
-        
-        const camera = new THREE.PerspectiveCamera(45, rightPanel.clientWidth / rightPanel.clientHeight, 0.1, 5000);
-        camera.position.set(300, 300, 300);
-
+        // 3D 渲染引擎
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0d0d);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 5000);
+        camera.position.set(400, 400, 400);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
-        document.getElementById('3d-viewport').appendChild(renderer.domElement);
-
+        renderer.setSize(document.getElementById('viewport').clientWidth, document.getElementById('viewport').clientHeight);
+        document.getElementById('viewport').appendChild(renderer.domElement);
         const controls = new OrbitControls(camera, renderer.domElement);
-        
-        // 环境光与平行光
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(200, 400, 200);
-        scene.add(dirLight);
-        
-        // 网格与坐标轴
-        const gridHelper = new THREE.GridHelper(1000, 50, 0x555555, 0x444444);
-        scene.add(gridHelper);
-        const axesHelper = new THREE.AxesHelper(150);
-        scene.add(axesHelper);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7), new THREE.GridHelper(1000, 50, 0x222222, 0x111111));
+        const light = new THREE.DirectionalLight(0xffffff, 0.8); light.position.set(200, 500, 200); scene.add(light);
 
-        let finalMeshObject = null;
-
-        // 执行生成算法
-        window.generate3D = function() {
-            const sData = window.shapeData;
-            
-            // 简单校验：必须三个面都有点
-            if(sData.front.points.length < 3 || sData.top.points.length < 3 || sData.side.points.length < 3) {
-                alert('请确保在三个视图中均描绘了至少3个点的闭合多边形！');
-                return;
-            }
-
-            document.getElementById('loading-mask').style.display = 'flex';
-            
-            // 使用 setTimeout 让 UI 有机会渲染 loading
+        let mesh = null;
+        window.runBuild = () => {
+            if(!data.front.done || !data.top.done || !data.side.done) return alert("请闭合所有视图路径！");
+            document.getElementById('loading').style.display = 'flex';
             setTimeout(() => {
                 try {
-                    // 清除旧模型
-                    if(finalMeshObject) scene.remove(finalMeshObject);
-
-                    const depth = parseFloat(document.getElementById('extrude-depth').value) || 500;
-                    const extrudeSettings = { depth: depth, bevelEnabled: false };
-
-                    // 1. 根据提取的点构建 THREE.Shape
-                    const frontShape = new THREE.Shape(sData.front.points);
-                    const topShape = new THREE.Shape(sData.top.points);
-                    const sideShape = new THREE.Shape(sData.side.points);
-
-                    // 2. 拉伸
-                    const frontGeo = new THREE.ExtrudeGeometry(frontShape, extrudeSettings);
-                    const topGeo = new THREE.ExtrudeGeometry(topShape, extrudeSettings);
-                    const sideGeo = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
-
-                    frontGeo.translate(0, 0, -depth / 2);
-                    topGeo.translate(0, 0, -depth / 2);
-                    sideGeo.translate(0, 0, -depth / 2);
-
-                    const frontMesh = new THREE.Mesh(frontGeo);
-                    const topMesh = new THREE.Mesh(topGeo);
-                    const sideMesh = new THREE.Mesh(sideGeo);
-
-                    // 3. 空间正交对齐
-                    topMesh.rotation.x = Math.PI / 2; // 俯视 -> XZ 面
-                    sideMesh.rotation.y = Math.PI / 2; // 侧视 -> YZ 面
-
-                    frontMesh.updateMatrix();
-                    topMesh.updateMatrix();
-                    sideMesh.updateMatrix();
-
-                    // 4. CSG 布尔交集
-                    let resultCSG = CSG.fromMesh(frontMesh).intersect(CSG.fromMesh(topMesh));
-                    resultCSG = resultCSG.intersect(CSG.fromMesh(sideMesh));
-
-                    const material = new THREE.MeshStandardMaterial({ 
-                        color: 0x0088ff, 
-                        roughness: 0.3, 
-                        metalness: 0.2,
-                        side: THREE.DoubleSide
-                    });
-                    
-                    finalMeshObject = CSG.toMesh(resultCSG, new THREE.Matrix4(), material);
-                    
-                    // 为了显示更清晰，添加边缘线框
-                    const edges = new THREE.EdgesGeometry(finalMeshObject.geometry);
-                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 }));
-                    finalMeshObject.add(line);
-
-                    scene.add(finalMeshObject);
-
-                } catch (err) {
-                    console.error(err);
-                    alert("布尔运算失败，请检查描点轨迹是否有自交叉或不合理的轮廓。");
-                } finally {
-                    document.getElementById('loading-mask').style.display = 'none';
-                }
+                    if(mesh) scene.remove(mesh);
+                    const d = parseFloat(document.getElementById('depth').value);
+                    const make = (pts) => {
+                        const s = new THREE.Shape(pts.map(p => new THREE.Vector2(p.x, p.y)));
+                        const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false });
+                        g.translate(0,0,-d/2); return new THREE.Mesh(g);
+                    };
+                    const mF = make(data.front.pts), mT = make(data.top.pts), mS = make(data.side.pts);
+                    mT.rotation.x = Math.PI/2; mS.rotation.y = Math.PI/2;
+                    [mF, mT, mS].forEach(m => m.updateMatrix());
+                    let res = CSG.fromMesh(mF).intersect(CSG.fromMesh(mT));
+                    res = res.intersect(CSG.fromMesh(mS));
+                    mesh = CSG.toMesh(res, new THREE.Matrix4(), new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide }));
+                    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+                    mesh.add(edge); scene.add(mesh);
+                } catch(e) { console.error(e); alert("生成失败，请检查点位。"); }
+                document.getElementById('loading').style.display = 'none';
             }, 100);
-        }
+        };
 
-        // ================= 导出 STL 逻辑 =================
-        document.getElementById('export-btn').addEventListener('click', () => {
-            if(!finalMeshObject) {
-                alert("请先生成 3D 实体！");
-                return;
-            }
-            const exporter = new STLExporter();
-            const stlString = exporter.parse(finalMeshObject);
-            const blob = new Blob([stlString], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'kingwood_part_' + Date.now() + '.stl';
-            link.click();
-        });
+        window.exportSTL = () => {
+            if(!mesh) return alert("请先生成模型");
+            const blob = new Blob([new STLExporter().parse(mesh)], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `APEX_MODEL_${Date.now()}.stl`; a.click();
+        };
 
-        // 渲染循环与窗口响应
-        window.addEventListener('resize', () => {
-            camera.aspect = rightPanel.clientWidth / rightPanel.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
-        });
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
+        function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); }
+        ani();
+        window.onresize = () => {
+            const w = document.getElementById('viewport').clientWidth, h = document.getElementById('viewport').clientHeight;
+            camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+        };
     </script>
 </body>
 </html>
