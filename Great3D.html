@@ -2,30 +2,216 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>三视图生成 3D 实体 - 核心引擎测试</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三视图转 3D 实体引擎 - 交互描点版</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1e1e1e; color: #fff; font-family: sans-serif; }
-        #ui-panel { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; z-index: 10; }
-        button { background: #007acc; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; margin-top: 10px; }
-        button:hover { background: #005999; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #1e1e1e;
+            color: #fff;
+        }
+        /* 左侧面板 */
+        #left-panel {
+            width: 400px;
+            background: #252526;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        .panel-header {
+            padding: 15px 20px;
+            background: #333333;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-header h2 { margin: 0; font-size: 16px; color: #e0e0e0;}
+        .back-btn { color: #aaa; text-decoration: none; font-size: 14px; }
+        .back-btn:hover { color: #fff; }
+
+        /* 标签页导航 */
+        .tabs {
+            display: flex;
+            background: #2d2d2d;
+            border-bottom: 1px solid #444;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            font-size: 14px;
+            color: #888;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: #007acc;
+            border-bottom: 2px solid #007acc;
+            background: #252526;
+        }
+
+        /* 视图内容区 */
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            padding: 15px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .tab-content.active { display: flex; }
+
+        .toolbar { margin-bottom: 10px; display: flex; gap: 10px; }
+        .btn {
+            background: #007acc; color: white; border: none;
+            padding: 6px 12px; border-radius: 4px; cursor: pointer;
+            font-size: 12px; flex: 1;
+        }
+        .btn:hover { background: #005999; }
+        .btn-secondary { background: #444; }
+        .btn-secondary:hover { background: #555; }
+        
+        .canvas-container {
+            width: 100%;
+            height: 350px;
+            background: #111;
+            border: 1px dashed #555;
+            position: relative;
+            margin-bottom: 15px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            cursor: crosshair;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 2;
+        }
+        .bg-image {
+            position: absolute;
+            max-width: 100%; max-height: 100%;
+            opacity: 0.5; z-index: 1; pointer-events: none;
+        }
+        
+        .tips { font-size: 12px; color: #aaa; margin-bottom: 10px; line-height: 1.5; }
+
+        /* 底部操作区 */
+        .action-area {
+            padding: 20px;
+            background: #2d2d2d;
+            border-top: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .generate-btn {
+            background: #28a745; font-size: 16px; padding: 12px; font-weight: bold;
+        }
+        .generate-btn:hover { background: #218838; }
+
+        /* 右侧 3D 渲染区 */
+        #right-panel {
+            flex-grow: 1;
+            position: relative;
+        }
+        #loading-mask {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
+            z-index: 20; color: white; font-size: 18px;
+        }
     </style>
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "three": "https://esm.sh/three@0.160.0",
+                "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
                 "three-csg-ts": "https://esm.sh/three-csg-ts@3.1.11?external=three"
             }
         }
     </script>
 </head>
 <body>
-    <div id="ui-panel">
-        <h3>三视图 3D 构建器</h3>
-        <p>1. 自动生成 主视、俯视、左视 二维轮廓</p>
-        <p>2. 空间正交拉伸</p>
-        <p>3. CSG 布尔交集运算</p>
-        <button id="export-btn">导出为 STL 文件</button>
+
+    <!-- 左侧交互面板 -->
+    <div id="left-panel">
+        <div class="panel-header">
+            <h2>实体生成器 (CSG)</h2>
+            <a href="index.html" class="back-btn">← 返回大厅</a>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('front')">主视图 (XY)</div>
+            <div class="tab" onclick="switchTab('top')">俯视图 (XZ)</div>
+            <div class="tab" onclick="switchTab('side')">左视图 (YZ)</div>
+        </div>
+
+        <!-- 主视图 -->
+        <div id="tab-front" class="tab-content active">
+            <div class="tips">1. 点击上传底图；2. 在网格上点击描绘轮廓；3. 点击闭合图形。</div>
+            <div class="toolbar">
+                <input type="file" id="upload-front" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'front')">
+                <button class="btn" onclick="document.getElementById('upload-front').click()">上传底图</button>
+                <button class="btn btn-secondary" onclick="clearPoints('front')">清空点位</button>
+                <button class="btn btn-secondary" onclick="closeShape('front')">闭合图形</button>
+            </div>
+            <div class="canvas-container" id="container-front">
+                <img id="img-front" class="bg-image" style="display:none">
+                <canvas id="canvas-front" width="370" height="350"></canvas>
+            </div>
+        </div>
+
+        <!-- 俯视图 -->
+        <div id="tab-top" class="tab-content">
+            <div class="tips">描绘俯视图轮廓，生成后将映射至 XZ 平面。</div>
+            <div class="toolbar">
+                <input type="file" id="upload-top" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'top')">
+                <button class="btn" onclick="document.getElementById('upload-top').click()">上传底图</button>
+                <button class="btn btn-secondary" onclick="clearPoints('top')">清空点位</button>
+                <button class="btn btn-secondary" onclick="closeShape('top')">闭合图形</button>
+            </div>
+            <div class="canvas-container" id="container-top">
+                <img id="img-top" class="bg-image" style="display:none">
+                <canvas id="canvas-top" width="370" height="350"></canvas>
+            </div>
+        </div>
+
+        <!-- 左视图 -->
+        <div id="tab-side" class="tab-content">
+            <div class="tips">描绘左侧剖面轮廓，生成后将映射至 YZ 平面。</div>
+            <div class="toolbar">
+                <input type="file" id="upload-side" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'side')">
+                <button class="btn" onclick="document.getElementById('upload-side').click()">上传底图</button>
+                <button class="btn btn-secondary" onclick="clearPoints('side')">清空点位</button>
+                <button class="btn btn-secondary" onclick="closeShape('side')">闭合图形</button>
+            </div>
+            <div class="canvas-container" id="container-side">
+                <img id="img-side" class="bg-image" style="display:none">
+                <canvas id="canvas-side" width="370" height="350"></canvas>
+            </div>
+        </div>
+
+        <div class="action-area">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label style="font-size: 12px; color: #aaa;">拉伸深度设置:</label>
+                <input type="number" id="extrude-depth" value="500" style="width: 80px; background: #111; color: #fff; border: 1px solid #444; padding: 4px; text-align: center;">
+            </div>
+            <button class="btn generate-btn" onclick="generate3D()">执行空间相交运算 ⚡</button>
+            <button class="btn" id="export-btn" style="background:#5c2d91;">导出 STL 打印文件</button>
+        </div>
+    </div>
+
+    <!-- 右侧 3D 渲染区 -->
+    <div id="right-panel">
+        <div id="loading-mask">正在进行布尔运算...</div>
+        <div id="3d-viewport"></div>
     </div>
 
     <script type="module">
@@ -34,115 +220,253 @@
         import { STLExporter } from 'three/addons/exporters/STLExporter.js';
         import { CSG } from 'three-csg-ts';
 
-        // ================= 1. 场景基础初始化 =================
+        // ================= 数据状态管理 =================
+        window.shapeData = {
+            front: { points: [], closed: false },
+            top: { points: [], closed: false },
+            side: { points: [], closed: false }
+        };
+
+        // ================= 视图切换逻辑 =================
+        window.switchTab = function(viewName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + viewName).classList.add('active');
+        }
+
+        // ================= Canvas 描点交互逻辑 =================
+        function initCanvas(viewName) {
+            const canvas = document.getElementById('canvas-' + viewName);
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制网格背景
+            function drawGrid() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < canvas.width; i += 20) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                }
+                for (let i = 0; i < canvas.height; i += 20) {
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+                }
+                // 画中心十字轴
+                ctx.strokeStyle = '#666';
+                ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, canvas.height/2); ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
+            }
+
+            // 绘制点和连线
+            function drawShape() {
+                drawGrid();
+                const pts = window.shapeData[viewName].points;
+                if(pts.length === 0) return;
+
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                // 将 Three.js 坐标转换回 Canvas 坐标进行绘制
+                const toCanvasX = (x) => x + canvas.width / 2;
+                const toCanvasY = (y) => canvas.height / 2 - y;
+
+                ctx.moveTo(toCanvasX(pts[0].x), toCanvasY(pts[0].y));
+                for(let i=1; i<pts.length; i++) {
+                    ctx.lineTo(toCanvasX(pts[i].x), toCanvasY(pts[i].y));
+                }
+                
+                if(window.shapeData[viewName].closed) {
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
+                    ctx.fill();
+                }
+                ctx.stroke();
+
+                // 画圆点
+                ctx.fillStyle = '#fff';
+                pts.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(toCanvasX(p.x), toCanvasY(p.y), 3, 0, Math.PI*2);
+                    ctx.fill();
+                });
+            }
+
+            drawGrid();
+
+            // 鼠标点击事件提取坐标
+            canvas.addEventListener('mousedown', function(e) {
+                if(window.shapeData[viewName].closed) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.clientX - rect.left;
+                const clientY = e.clientY - rect.top;
+
+                // 核心：将 Canvas 坐标转换为以中心为原点，Y轴向上的坐标
+                const threeX = clientX - canvas.width / 2;
+                const threeY = canvas.height / 2 - clientY;
+
+                window.shapeData[viewName].points.push(new THREE.Vector2(threeX, threeY));
+                drawShape();
+            });
+
+            // 暴露方法到全局供按钮调用
+            window.clearPoints = function(v) {
+                if(v === viewName) {
+                    window.shapeData[v].points = [];
+                    window.shapeData[v].closed = false;
+                    drawShape();
+                }
+            }
+            window.closeShape = function(v) {
+                if(v === viewName && window.shapeData[v].points.length > 2) {
+                    window.shapeData[v].closed = true;
+                    drawShape();
+                }
+            }
+        }
+
+        initCanvas('front');
+        initCanvas('top');
+        initCanvas('side');
+
+        window.handleImageUpload = function(event, viewName) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('img-' + viewName);
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // ================= Three.js 3D 渲染核心 =================
+        const rightPanel = document.getElementById('right-panel');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x2d2d2d);
         
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(150, 150, 150);
+        const camera = new THREE.PerspectiveCamera(45, rightPanel.clientWidth / rightPanel.clientHeight, 0.1, 5000);
+        camera.position.set(300, 300, 300);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
+        document.getElementById('3d-viewport').appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         
-        // 添加灯光与辅助线
+        // 环境光与平行光
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(100, 200, 50);
+        dirLight.position.set(200, 400, 200);
         scene.add(dirLight);
-        scene.add(new THREE.AxesHelper(100)); // 红X, 绿Y, 蓝Z
+        
+        // 网格与坐标轴
+        const gridHelper = new THREE.GridHelper(1000, 50, 0x555555, 0x444444);
+        scene.add(gridHelper);
+        const axesHelper = new THREE.AxesHelper(150);
+        scene.add(axesHelper);
 
-        // ================= 2. 定义三视图二维轮廓 (Shape) =================
-        const depth = 100; // 拉伸深度，必须足够大以完全穿透其他几何体
+        let finalMeshObject = null;
 
-        // [主视图] - 绘制在 XY 平面上
-        const frontShape = new THREE.Shape();
-        frontShape.moveTo(-30, -30);
-        frontShape.lineTo(30, -30);
-        frontShape.lineTo(30, 0);
-        frontShape.lineTo(0, 30); // 顶部尖角
-        frontShape.lineTo(-30, 0);
-        frontShape.lineTo(-30, -30);
+        // 执行生成算法
+        window.generate3D = function() {
+            const sData = window.shapeData;
+            
+            // 简单校验：必须三个面都有点
+            if(sData.front.points.length < 3 || sData.top.points.length < 3 || sData.side.points.length < 3) {
+                alert('请确保在三个视图中均描绘了至少3个点的闭合多边形！');
+                return;
+            }
 
-        // [俯视图] - 最终需要放置在 XZ 平面上
-        const topShape = new THREE.Shape();
-        topShape.moveTo(-30, -30);
-        topShape.lineTo(30, -30);
-        topShape.lineTo(30, 30);
-        topShape.lineTo(-30, 30);
-        topShape.lineTo(-30, -30);
+            document.getElementById('loading-mask').style.display = 'flex';
+            
+            // 使用 setTimeout 让 UI 有机会渲染 loading
+            setTimeout(() => {
+                try {
+                    // 清除旧模型
+                    if(finalMeshObject) scene.remove(finalMeshObject);
 
-        // [侧视图] - 最终需要放置在 YZ 平面上
-        const sideShape = new THREE.Shape();
-        sideShape.moveTo(-30, -30);
-        sideShape.lineTo(30, -30);
-        sideShape.lineTo(30, 30);
-        sideShape.lineTo(0, 30);
-        sideShape.lineTo(0, 0);
-        sideShape.lineTo(-30, 0);
-        sideShape.lineTo(-30, -30);
+                    const depth = parseFloat(document.getElementById('extrude-depth').value) || 500;
+                    const extrudeSettings = { depth: depth, bevelEnabled: false };
 
-        // ================= 3. 生成拉伸几何体 =================
-        const extrudeSettings = { depth: depth, bevelEnabled: false };
-        const frontGeo = new THREE.ExtrudeGeometry(frontShape, extrudeSettings);
-        const topGeo = new THREE.ExtrudeGeometry(topShape, extrudeSettings);
-        const sideGeo = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
+                    // 1. 根据提取的点构建 THREE.Shape
+                    const frontShape = new THREE.Shape(sData.front.points);
+                    const topShape = new THREE.Shape(sData.top.points);
+                    const sideShape = new THREE.Shape(sData.side.points);
 
-        // 将几何体居中偏移，使拉伸的原点位于中心
-        frontGeo.translate(0, 0, -depth / 2);
-        topGeo.translate(0, 0, -depth / 2);
-        sideGeo.translate(0, 0, -depth / 2);
+                    // 2. 拉伸
+                    const frontGeo = new THREE.ExtrudeGeometry(frontShape, extrudeSettings);
+                    const topGeo = new THREE.ExtrudeGeometry(topShape, extrudeSettings);
+                    const sideGeo = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
 
-        // ================= 4. 空间姿态对齐 (关键步骤) =================
-        const frontMesh = new THREE.Mesh(frontGeo);
-        // 主视图：本身就是沿 Z 轴拉伸，无需旋转
+                    frontGeo.translate(0, 0, -depth / 2);
+                    topGeo.translate(0, 0, -depth / 2);
+                    sideGeo.translate(0, 0, -depth / 2);
 
-        const topMesh = new THREE.Mesh(topGeo);
-        // 俯视图：需将平面的法线从 Z 轴旋转到 Y 轴 (放置在 XZ 面)
-        topMesh.rotation.x = Math.PI / 2; 
+                    const frontMesh = new THREE.Mesh(frontGeo);
+                    const topMesh = new THREE.Mesh(topGeo);
+                    const sideMesh = new THREE.Mesh(sideGeo);
 
-        const sideMesh = new THREE.Mesh(sideGeo);
-        // 侧视图：需将平面的法线从 Z 轴旋转到 X 轴 (放置在 YZ 面)
-        sideMesh.rotation.y = Math.PI / 2; 
+                    // 3. 空间正交对齐
+                    topMesh.rotation.x = Math.PI / 2; // 俯视 -> XZ 面
+                    sideMesh.rotation.y = Math.PI / 2; // 侧视 -> YZ 面
 
-        // 更新世界矩阵以备 CSG 计算
-        frontMesh.updateMatrix();
-        topMesh.updateMatrix();
-        sideMesh.updateMatrix();
+                    frontMesh.updateMatrix();
+                    topMesh.updateMatrix();
+                    sideMesh.updateMatrix();
 
-        // ================= 5. CSG 布尔交集运算 =================
-        // 求交公式: Entity = Front ∩ Top ∩ Side
-        let resultCSG = CSG.fromMesh(frontMesh).intersect(CSG.fromMesh(topMesh));
-        resultCSG = resultCSG.intersect(CSG.fromMesh(sideMesh));
+                    // 4. CSG 布尔交集
+                    let resultCSG = CSG.fromMesh(frontMesh).intersect(CSG.fromMesh(topMesh));
+                    resultCSG = resultCSG.intersect(CSG.fromMesh(sideMesh));
 
-        // 生成最终实体并应用材质
-        const material = new THREE.MeshStandardMaterial({ 
-            color: 0x00ff88, 
-            roughness: 0.4, 
-            metalness: 0.1,
-            side: THREE.DoubleSide
-        });
-        const finalMesh = CSG.toMesh(resultCSG, new THREE.Matrix4(), material);
-        scene.add(finalMesh);
+                    const material = new THREE.MeshStandardMaterial({ 
+                        color: 0x0088ff, 
+                        roughness: 0.3, 
+                        metalness: 0.2,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    finalMeshObject = CSG.toMesh(resultCSG, new THREE.Matrix4(), material);
+                    
+                    // 为了显示更清晰，添加边缘线框
+                    const edges = new THREE.EdgesGeometry(finalMeshObject.geometry);
+                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 }));
+                    finalMeshObject.add(line);
 
-        // ================= 6. STL 导出逻辑 =================
+                    scene.add(finalMeshObject);
+
+                } catch (err) {
+                    console.error(err);
+                    alert("布尔运算失败，请检查描点轨迹是否有自交叉或不合理的轮廓。");
+                } finally {
+                    document.getElementById('loading-mask').style.display = 'none';
+                }
+            }, 100);
+        }
+
+        // ================= 导出 STL 逻辑 =================
         document.getElementById('export-btn').addEventListener('click', () => {
+            if(!finalMeshObject) {
+                alert("请先生成 3D 实体！");
+                return;
+            }
             const exporter = new STLExporter();
-            const stlString = exporter.parse(scene);
+            const stlString = exporter.parse(finalMeshObject);
             const blob = new Blob([stlString], { type: 'text/plain' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'generated_model.stl';
+            link.download = 'kingwood_part_' + Date.now() + '.stl';
             link.click();
         });
 
-        // 渲染循环
+        // 渲染循环与窗口响应
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = rightPanel.clientWidth / rightPanel.clientHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
         });
 
         function animate() {
