@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>APEX CAD ENGINE - PRO 满血稳定版</title>
+    <title>APEX CAD ENGINE - PRO 满血参数版</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; flex-direction: row; }
         
@@ -62,6 +62,11 @@
 
         #viewport { flex-grow: 1; width: 100%; height: 100%; }
 
+        /* 新增：3D 导航控制器 (ISO Cube) */
+        #view-cube { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 8px; border: 1px solid #333; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #view-cube button { background: #222; color: #ccc; border: 1px solid #444; padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; font-weight: bold; }
+        #view-cube button:hover { background: #deff9a; color: #000; }
+
         /* === 右侧固定装配控制面板 === */
         #right-panel { flex: 0 0 340px; width: 340px; background: #151515; border-left: 1px solid #333; display: none; flex-direction: column; z-index: 20; box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
         
@@ -82,13 +87,16 @@
         .dim-row { display: flex; justify-content: space-between; margin-top: 8px; }
         .dim-row span.val { color: #fff; font-weight: bold; font-size: 14px; }
 
-        .transform-tools { padding: 15px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        .tool-row { display: flex; gap: 5px; flex-wrap: wrap; }
+        /* 新增：参数化精确旋转面板 */
+        #precision-transform { padding: 15px; background: #111; border-top: 1px solid #333; display: none; flex-direction: column; gap: 8px; }
+        .tool-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        
+        .transform-tools { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
         .transform-tools button { flex: 1; padding: 10px 5px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; white-space: nowrap; }
         .transform-tools button.active { background: #deff9a; color: #000; font-weight: bold; }
         .transform-tools button:hover:not(.active) { background: #444; }
         
-        .boolean-tools { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+        .boolean-tools { padding: 15px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
         .boolean-row { display: flex; gap: 8px; }
         .boolean-row button { flex: 1; padding: 12px 5px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
         .boolean-row button:hover { background: #555; }
@@ -186,9 +194,18 @@
     </div>
     
     <div id="center-viewport">
+        <div id="view-cube">
+            <button onclick="setCameraView('iso')" style="color:#deff9a;">[ ISO ] 等轴测</button>
+            <div style="display:flex; gap:5px;">
+                <button onclick="setCameraView('top')" style="flex:1">俯视</button>
+                <button onclick="setCameraView('front')" style="flex:1">主视</button>
+                <button onclick="setCameraView('right')" style="flex:1">右视</button>
+            </div>
+        </div>
+
         <div id="toggle-panel-btn" onclick="toggleLeftPanel()" title="收起/展开绘图板">◀<br>收<br>起</div>
         <div id="loading">COMPUTING...</div>
-        <div id="viewport-hints"><span>左键</span>旋转观察 | <span>右键</span>平移视口 | <span>滚轮</span>放大缩小</div>
+        <div id="viewport-hints"><span>左键</span>旋转观察 | <span>右键</span>平移视口 | <span>滚轮</span>缩放</div>
         <div id="viewport"></div>
     </div>
 
@@ -212,12 +229,27 @@
             </div>
         </div>
 
-        <div class="transform-tools">
-            <div style="font-size:11px; color:#aaa;">空间操作与编辑:</div>
+        <div id="precision-transform">
+            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">精确旋转输入 (针对选中实体):</div>
             <div class="tool-row">
-                <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动</button>
-                <button id="t-rotate" onclick="setTransformMode('rotate')">旋转</button>
-                <button id="t-scale" onclick="setTransformMode('scale')">比例缩放</button>
+                <button class="btn-sec" onclick="rotateSelected('x', 90)">+90° X</button>
+                <button class="btn-sec" onclick="rotateSelected('y', 90)">+90° Y</button>
+                <button class="btn-sec" onclick="rotateSelected('z', 90)">+90° Z</button>
+            </div>
+            <div class="tool-row" style="margin-top:4px;">
+                <input type="number" id="custom-deg" value="45" style="width:45px; background:#222; color:#deff9a; border:1px solid #555; text-align:center; padding:5px; border-radius:4px; outline:none;">
+                <span style="font-size:12px; color:#888;">度</span>
+                <button class="btn-sec" onclick="rotateSelected('x', null)">转 X</button>
+                <button class="btn-sec" onclick="rotateSelected('y', null)">转 Y</button>
+                <button class="btn-sec" onclick="rotateSelected('z', null)">转 Z</button>
+            </div>
+        </div>
+
+        <div class="transform-tools">
+            <div class="tool-row">
+                <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动句柄</button>
+                <button id="t-rotate" onclick="setTransformMode('rotate')">旋转球</button>
+                <button id="t-scale" onclick="setTransformMode('scale')">缩放控制</button>
             </div>
             <div class="tool-row">
                 <button onclick="cloneSelectedPart()">📄 复制</button>
@@ -232,7 +264,7 @@
         <div class="boolean-tools">
             <div style="font-size:11px; color:#aaa;">二次加工 (列表排上方的为主体，下方为刀具):</div>
             <div class="boolean-row">
-                <button class="b-union" onclick="execBoolean('union')" title="可勾选2个及以上实体">求和 ∪</button>
+                <button class="b-union" onclick="execBoolean('union')" title="可勾选多个实体">求和 ∪</button>
                 <button class="b-sub" onclick="execBoolean('subtract')">求差 ➖</button>
                 <button class="b-int" onclick="execBoolean('intersect')">求交 ∩</button>
             </div>
@@ -266,7 +298,7 @@
             alert(`【${name}】功能接口已就绪。\n\n由于浏览器本地 WebGL 性能限制，复杂拓扑计算（如倒角/中空/表面雕刻）后续将通过云端引擎渲染。敬请期待下个版本更新！\n\n💡 临时方案：如果需要中空或倒角，建议直接在左侧 2D 草图中精确绘制截面，然后进行拉伸生成。`);
         };
 
-        // ================= 2D 画布引擎 (恢复最完善的手绘与弧线支持) =================
+        // ================= 2D 画布引擎 (最完善手绘+弧线) =================
         const views = ['front', 'top', 'side'];
         const CV_SIZE = 1000; 
         const data = { 
@@ -477,7 +509,7 @@
 
         // ================= 核心 3D 架构 =================
         const scene = new THREE.Scene(); 
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 5000);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 10000);
         camera.position.set(800, 800, 800);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(document.getElementById('viewport').clientWidth, document.getElementById('viewport').clientHeight);
@@ -497,6 +529,17 @@
         scene.add(new THREE.AxesHelper(500)); 
         scene.add(new THREE.DirectionalLight(0xffffff, 0.8)).position.set(200, 500, 200);
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+        // 视口快捷导航控制
+        window.setCameraView = (view) => {
+            const dist = 1200;
+            if(view === 'iso') camera.position.set(800, 800, 800);
+            else if(view === 'top') camera.position.set(0, dist, 0);
+            else if(view === 'front') camera.position.set(0, 0, dist);
+            else if(view === 'right') camera.position.set(dist, 0, 0);
+            controls.target.set(0,0,0);
+            controls.update();
+        };
 
         const partsList = []; 
         let partCounter = 0;
@@ -526,6 +569,7 @@
             tControls.detach();
             selected3DPartId = null;
             document.getElementById('dimension-section').style.display = 'none';
+            document.getElementById('precision-transform').style.display = 'none';
 
             sceneHistory[idx].forEach(sp => {
                 const restoredMesh = sp.mesh.clone();
@@ -547,11 +591,10 @@
                 part.mesh.children.forEach(child => {
                     if (child.isLineSegments) {
                         if (part.id === selected3DPartId) {
-                            child.material.color.setHex(0xff9900); // 选中变橙色
+                            child.material.color.setHex(0xff9900);
                             child.material.opacity = 0.9;
-                            child.material.linewidth = 2; // WebGL支持的情况下加粗
                         } else {
-                            child.material.color.setHex(0xffffff); // 未选中变白
+                            child.material.color.setHex(0xffffff); 
                             child.material.opacity = 0.3;
                         }
                     }
@@ -586,16 +629,36 @@
         const select3DPart = (id) => {
             selected3DPartId = id; 
             refreshOutliner();
-            updateEdgeColors(); // 触发边线变色
+            updateEdgeColors(); 
             const part = partsList.find(p => p.id === id);
             if(part) { 
                 tControls.attach(part.mesh); 
-                document.getElementById('dimension-section').style.display = 'flex'; 
+                document.getElementById('dimension-section').style.display = 'flex';
+                document.getElementById('precision-transform').style.display = 'flex';
                 updateHUD(); 
             } else { 
                 tControls.detach(); 
-                document.getElementById('dimension-section').style.display = 'none'; 
+                document.getElementById('dimension-section').style.display = 'none';
+                document.getElementById('precision-transform').style.display = 'none';
             }
+        };
+
+        // 精确参数化旋转
+        window.rotateSelected = (axis, presetDeg) => {
+            if(!selected3DPartId) return;
+            const part = partsList.find(p => p.id === selected3DPartId);
+            if(!part) return;
+            
+            const degrees = presetDeg !== null ? presetDeg : parseFloat(document.getElementById('custom-deg').value);
+            if(isNaN(degrees)) return alert("请输入有效的度数");
+            
+            const rad = THREE.MathUtils.degToRad(degrees);
+            if(axis === 'x') part.mesh.rotateX(rad);
+            if(axis === 'y') part.mesh.rotateY(rad);
+            if(axis === 'z') part.mesh.rotateZ(rad);
+            
+            updateHUD();
+            saveSceneState();
         };
 
         const updateHUD = () => {
@@ -633,14 +696,16 @@
             if(!selected3DPartId) return;
             const index = partsList.findIndex(p => p.id === selected3DPartId);
             scene.remove(partsList[index].mesh); tControls.detach(); partsList.splice(index, 1);
-            selected3DPartId = null; document.getElementById('dimension-section').style.display = 'none';
+            selected3DPartId = null; 
+            document.getElementById('dimension-section').style.display = 'none';
+            document.getElementById('precision-transform').style.display = 'none';
             refreshOutliner();
             saveSceneState();
         };
 
         const getCheckedParts = () => partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked);
 
-        // ================= ★ 恢复原生安全的布尔运算引擎 =================
+        // ================= ★ 微米级容差防崩的布尔引擎 (Auto-Epsilon Rescue) =================
         window.execBoolean = (operation) => {
             const checked = getCheckedParts();
             if(operation === 'union' && checked.length < 2) return alert("求和运算请至少勾选 2 个及以上的实体！");
@@ -649,42 +714,58 @@
             document.getElementById('loading').style.display = 'flex';
             
             setTimeout(() => {
-                const safeHistoryIdx = historyIndex; // 记录运算前的安全状态，用于防崩恢复
+                const safeHistoryIdx = historyIndex; // 记录绝对安全存档
                 
                 try {
                     saveSceneState();
-                    
-                    // 确保所有顶点的世界矩阵已更新
                     checked.forEach(p => p.mesh.updateMatrixWorld(true));
                     
-                    // 取第一个模型作为主体。使用 three-csg-ts 原生提取法，保证不破坏法线
-                    let resultCSG = CSG.fromMesh(checked[0].mesh, checked[0].mesh.matrixWorld);
-                    
-                    if(operation === 'union') {
-                        // 支持多个实体无限求和
-                        for (let i = 1; i < checked.length; i++) {
-                            const nextCSG = CSG.fromMesh(checked[i].mesh, checked[i].mesh.matrixWorld);
-                            resultCSG = resultCSG.union(nextCSG);
+                    const doCSG = (meshA, meshB, op) => {
+                        const csgA = CSG.fromMesh(meshA, meshA.matrixWorld);
+                        const csgB = CSG.fromMesh(meshB, meshB.matrixWorld);
+                        if (op === 'union') return csgA.union(csgB);
+                        if (op === 'subtract') return csgA.subtract(csgB);
+                        if (op === 'intersect') return csgA.intersect(csgB);
+                    };
+
+                    let resultCSG;
+                    let isRescueTriggered = false;
+
+                    try {
+                        // 尝试第一次精准运算
+                        if(operation === 'union') {
+                            resultCSG = CSG.fromMesh(checked[0].mesh, checked[0].mesh.matrixWorld);
+                            for (let i = 1; i < checked.length; i++) {
+                                resultCSG = resultCSG.union(CSG.fromMesh(checked[i].mesh, checked[i].mesh.matrixWorld));
+                            }
+                        } else {
+                            resultCSG = doCSG(checked[0].mesh, checked[1].mesh, operation);
                         }
-                    }
-                    else {
-                        const csgB = CSG.fromMesh(checked[1].mesh, checked[1].mesh.matrixWorld);
-                        if(operation === 'subtract') resultCSG = resultCSG.subtract(csgB); 
-                        else if(operation === 'intersect') resultCSG = resultCSG.intersect(csgB);
-                    }
-                    
-                    if (!resultCSG || resultCSG.polygons.length === 0) {
-                        throw new Error("检测到重合面导致计算崩溃，或两物体在空间中完全没有接触。\n💡提示：请尝试微微拉伸或移动作为刀具的切削体！");
+                        if (!resultCSG || resultCSG.polygons.length === 0) throw new Error("EmptyResult");
+                    } catch (primaryError) {
+                        // ★ 核心修复：共面零容差拦截与微米级抖动抢救
+                        console.warn("Primary CSG calculation failed. Attempting Epsilon Rescue...");
+                        isRescueTriggered = true;
+                        
+                        if(operation === 'union') throw new Error("求和失败，模型可能没有任何接触。");
+
+                        // 拷贝一个刀具，并将其微移 0.001 毫米，打破几何学上的共面死锁
+                        const rescueTool = checked[1].mesh.clone();
+                        rescueTool.position.x += 0.001; 
+                        rescueTool.position.y += 0.001; 
+                        rescueTool.position.z += 0.001; 
+                        rescueTool.updateMatrixWorld(true);
+
+                        resultCSG = doCSG(checked[0].mesh, rescueTool, operation);
+                        if (!resultCSG || resultCSG.polygons.length === 0) throw new Error("RescueFailed");
                     }
                     
                     const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide });
                     const newMesh = CSG.toMesh(resultCSG, new THREE.Matrix4(), mat);
                     
-                    // 重建边缘高亮线
                     const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
                     newMesh.add(edge);
                     
-                    // 只有全部计算成功才从场景中删除旧零件
                     checked.forEach(part => {
                         scene.remove(part.mesh);
                         partsList.splice(partsList.indexOf(part), 1);
@@ -692,6 +773,7 @@
                     
                     tControls.detach();
                     document.getElementById('dimension-section').style.display = 'none';
+                    document.getElementById('precision-transform').style.display = 'none';
                     
                     const newId = `Part_${++partCounter}`;
                     partsList.push({ id: newId, name: `布尔处理件_${newId}`, mesh: newMesh });
@@ -699,13 +781,16 @@
                     
                     refreshOutliner();
                     select3DPart(newId);
-                    saveSceneState(); // 成功，写入新历史
+                    saveSceneState(); 
+                    
+                    if(isRescueTriggered) {
+                        console.log("Successfully resolved coplanar conflict using Epsilon Rescue.");
+                    }
                     
                 } catch(e) {
-                    console.error(e); 
-                    // ★ 终极防崩溃：即使 CSG 底层报错，立刻读档回到运算前的完美状态
+                    // 若两次均失败，执行时光机完美恢复
                     loadState(safeHistoryIdx); 
-                    alert("⚠️ 布尔运算失败：\n" + (e.message || "由于 WebGL 容差问题发生拓扑错误。") + "\n\n🔧 智能保护：您的模型已免遭破坏并完美恢复原状！");
+                    alert("⚠️ 布尔运算失败：\n" + (e.message === 'RescueFailed' ? '两物体完美共面或完全无接触，无法切削。' : '拓扑结构极其复杂导致崩溃。') + "\n\n🔧 智能保护：您的模型已免遭破坏并完美恢复原状！");
                 } finally {
                     document.getElementById('loading').style.display = 'none';
                 }
@@ -733,7 +818,7 @@
                         if(ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
                         else s.lineTo(tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
                     }
-                    // ★ 修复生成面皮的BUG：强制闭合 3D 几何路径，确保生成实心体
+                    // ★ 强制闭合几何体
                     s.closePath();
                 }
                 const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(s, extSet).translate(0,0,-depth/2));
