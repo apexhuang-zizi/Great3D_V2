@@ -175,7 +175,8 @@
                                 W: <input type="number" id="rw-${v}" value="200" oninput="updateEntityParam('${v}')"> H: <input type="number" id="rh-${v}" value="200" oninput="updateEntityParam('${v}')">
                             </div>
                             <div id="p-circle-${v}" class="param-box" style="display:none">
-                                R: <input type="number" id="cr-${v}" value="150" oninput="updateEntityParam('${v}')">
+                                Rx(宽半): <input type="number" id="crx-${v}" value="150" oninput="updateEntityParam('${v}')">
+                                Ry(高半): <input type="number" id="cry-${v}" value="150" oninput="updateEntityParam('${v}')">
                             </div>
                         </div>
                         
@@ -415,7 +416,9 @@
                 if(ent.type === 'rect') {
                     ctx.rect(ent.cx - ent.w/2, ent.cy - ent.h/2, ent.w, ent.h);
                 } else if (ent.type === 'circle') {
-                    ctx.arc(ent.cx, ent.cy, ent.r, 0, Math.PI*2);
+                    // 支持画正圆和椭圆
+                    if (ent.r) ctx.arc(ent.cx, ent.cy, ent.r, 0, Math.PI*2); // 兼容旧数据
+                    else ctx.ellipse(ent.cx, ent.cy, ent.rx, ent.ry, 0, 0, Math.PI*2);
                 } else if (ent.type === 'path') {
                     ctx.moveTo(ent.pts[0].cx, ent.pts[0].cy);
                     for(let i=1; i<ent.pts.length; i++) {
@@ -530,20 +533,40 @@
                 if (e.button === 0) { // 左键逻辑
                     if (data[v].mode === 'select') {
                         const hitId = hitTest(v, cx, cy); data[v].selectedId = hitId;
+                        
                         if (hitId !== null) {
                             const ent = data[v].entities.find(en => en.id === hitId);
                             dragState = { ent, startX: cx, startY: cy, origCx: ent.cx, origCy: ent.cy };
+                            
+                            // 🌟 新增：检测是否点中了路径上的某个顶点
+                            if (ent.type === 'path') {
+                                dragState.origPts = ent.pts.map(p => ({ cx: p.cx, cy: p.cy }));
+                                const clickTolerance = 10 / data[v].zoom;
+                                for(let i=0; i<ent.pts.length; i++) {
+                                    if(Math.hypot(cx - ent.pts[i].cx, cy - ent.pts[i].cy) < clickTolerance) {
+                                        dragState.pointIndex = i; // 记录被点中的节点索引
+                                        break;
+                                    }
+                                }
+                            }
+                            
                             if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; } 
                             else if(ent.type === 'circle') { document.getElementById(`p-circle-${v}`).style.display = 'flex'; document.getElementById(`cr-${v}`).value = ent.r; }
-                        } else { document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; }
+                        } else { 
+                            document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; 
+                        }
                         renderCanvas(v);
-                    } 
+                    }
+                        
                     else {
                         // 正交吸附容差放大
                         if((data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) && data[v].currentPath.length > 0) {
-                            const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                            if (Math.abs(cx - lastP.cx) < 25 / data[v].zoom) cx = lastP.cx; 
-                            else if (Math.abs(cy - lastP.cy) < 25 / data[v].zoom) cy = lastP.cy;
+                            // 只有按住键盘的 Shift 键，才会强制画水平或垂直的直线！否则绝对自由。
+                            if (e.shiftKey) {
+                                const lastP = data[v].currentPath[data[v].currentPath.length - 1];
+                                if (Math.abs(cx - lastP.cx) < Math.abs(cy - lastP.cy)) cx = lastP.cx; 
+                                else cy = lastP.cy;
+                            }
                         }
                         
                         if(data[v].mode === 'rect') {
@@ -551,7 +574,9 @@
                             data[v].entities.push({ id: ++entityIdCounter, type: 'rect', cx, cy, w, h });
                         } else if(data[v].mode === 'circle') {
                             const r = parseFloat(document.getElementById(`cr-${v}`).value) || 50;
-                            data[v].entities.push({ id: ++entityIdCounter, type: 'circle', cx, cy, r });
+                            const rx = parseFloat(document.getElementById(`crx-${v}`).value) || 50;
+                            const ry = parseFloat(document.getElementById(`cry-${v}`).value) || 50;
+                            data[v].entities.push({ id: ++entityIdCounter, type: 'circle', cx, cy, rx, ry });
                         } else {
                             if(data[v].currentPath.length === 0) {
                                 data[v].currentPath.push({ type: 'start', cx, cy });
@@ -590,11 +615,32 @@
         cv.addEventListener('mousemove', (e) => {
             let { cx, cy } = getCanvasCoords(v, e);
 
+            // 【新代码：支持整体移动与单节点移动】
             if(data[v].mode === 'select' && dragState) {
-                dragState.ent.cx = dragState.origCx + (cx - dragState.startX);
-                dragState.ent.cy = dragState.origCy + (cy - dragState.startY);
+                let { cx, cy } = getCanvasCoords(v, e);
+                
+                // 如果点中了某个具体节点
+                if (dragState.pointIndex !== undefined) {
+                    const pt = dragState.ent.pts[dragState.pointIndex];
+                    pt.cx = cx; pt.cy = cy;
+                } else {
+                    // 否则整体移动
+                    const dx = cx - dragState.startX;
+                    const dy = cy - dragState.startY;
+                    
+                    if (dragState.ent.type === 'path') {
+                        dragState.ent.pts.forEach((p, i) => {
+                            p.cx = dragState.origPts[i].cx + dx;
+                            p.cy = dragState.origPts[i].cy + dy;
+                        });
+                    } else {
+                        dragState.ent.cx = dragState.origCx + dx;
+                        dragState.ent.cy = dragState.origCy + dy;
+                    }
+                }
                 renderCanvas(v);
-            } 
+            }
+                
             // 当处于弧度调整阶段 (arcState === 1) 时，实时重绘带控制线和动态虚线的画布
             else if (data[v].mode === 'arc' && data[v].arcState === 1) {
                 renderCanvas(v); // 先画底层稳定图元
@@ -1058,7 +1104,9 @@
                     const x = tCoord(ent.cx), y = tCoordY(ent.cy), w = Math.round(ent.w*10)/10, h = Math.round(ent.h*10)/10;
                     s.moveTo(x - w/2, y - h/2); s.lineTo(x + w/2, y - h/2); s.lineTo(x + w/2, y + h/2); s.lineTo(x - w/2, y + h/2); s.lineTo(x - w/2, y - h/2);
                 } else if(ent.type === 'circle') {
-                    s.absarc(tCoord(ent.cx), tCoordY(ent.cy), Math.round(ent.r*10)/10, 0, Math.PI * 2, false);
+                    const rx = ent.rx ? ent.rx : ent.r;
+                    const ry = ent.ry ? ent.ry : ent.r;
+                    s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), Math.round(rx*10)/10, Math.round(ry*10)/10, 0, Math.PI * 2, false);
                 } else if(ent.type === 'path') {
                     s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy));
                     for(let i=1; i<ent.pts.length; i++) {
@@ -1135,31 +1183,43 @@
                         newMesh.rotation.copy(rot);
                     }
                     else if (strategy === 'sweep') {
-                        // 规定：主视图 front 画截面，侧视图 side 画路径
                         if(data.front.entities.length === 0 || data.side.currentPath.length === 0 && data.side.entities.length === 0) {
                             throw new Error("扫掠造型失败：请在主视图绘制1个闭合截面，并在侧视图绘制手柄路径线！");
                         }
                         
-                        // 1. 提取主视图第一个闭合图元作为横截面 Shape
                         const ent = data.front.entities[0];
                         const shape = new THREE.Shape();
-                        if(ent.type === 'circle') shape.absarc(tCoord(ent.cx), tCoordY(ent.cy), ent.r, 0, Math.PI * 2, false);
-                        else if(ent.type === 'rect') {
-                            const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h;
-                            shape.moveTo(x-w/2, y-h/2); shape.lineTo(x+w/2, y-h/2); shape.lineTo(x+w/2, y+h/2); shape.lineTo(x-w/2, y+h/2); shape.closePath();
+                        
+                        // 🌟 核心修复：计算截面的几何中心。
+                        let cx = 0, cy = 0;
+                        if(ent.type === 'path') {
+                            ent.pts.forEach(p => { cx += tCoord(p.cx); cy += tCoordY(p.cy); });
+                            cx /= ent.pts.length; cy /= ent.pts.length;
+                        } else if(ent.type === 'rect') { cx = tCoord(ent.cx); cy = tCoordY(ent.cy); }
+                        else if(ent.type === 'circle') { cx = tCoord(ent.cx); cy = tCoordY(ent.cy); }
+                    
+                        // 🌟 核心修复：绘制截面时，必须减去(cx, cy)将其强制居中到(0,0)，彻底消除扫掠偏移导致的怪异扭曲！
+                        if(ent.type === 'circle') {
+                            shape.absarc(0, 0, Math.round(ent.r*10)/10, 0, Math.PI * 2, false);
+                        } else if(ent.type === 'rect') {
+                            const w = Math.round(ent.w*10)/10, h = Math.round(ent.h*10)/10;
+                            shape.moveTo(-w/2, -h/2); shape.lineTo(w/2, -h/2); shape.lineTo(w/2, h/2); shape.lineTo(-w/2, h/2); shape.closePath();
+                        } else if(ent.type === 'path') {
+                            shape.moveTo(tCoord(ent.pts[0].cx) - cx, tCoordY(ent.pts[0].cy) - cy);
+                            for(let i=1; i<ent.pts.length; i++) {
+                                if(ent.pts[i].type === 'arc') shape.quadraticCurveTo(tCoord(ent.pts[i].cpx)-cx, tCoordY(ent.pts[i].cpy)-cy, tCoord(ent.pts[i].cx)-cx, tCoordY(ent.pts[i].cy)-cy);
+                                else shape.lineTo(tCoord(ent.pts[i].cx) - cx, tCoordY(ent.pts[i].cy) - cy);
+                            }
+                            shape.closePath();
                         }
                         
-                        // 2. 提取侧视图的手绘折线/弧线作为 3D 轨迹路径
                         const pathEntity = data.side.entities[0] || { pts: data.side.currentPath };
-                        const points3D = pathEntity.pts.map(p => {
-                            // 将侧视图 YZ 坐标投射到 3D 空间
-                            return new THREE.Vector3(0, tCoordY(p.cy), tCoord(p.cx)); 
-                        });
+                        const points3D = pathEntity.pts.map(p => new THREE.Vector3(0, tCoordY(p.cy), tCoord(p.cx)));
                         
-                        const sweepPath = new THREE.CatmullRomCurve3(points3D);
+                        // 使用 centripetal (向心曲线) 并设置张力为 0.5，让转弯处更平滑不扭曲
+                        const sweepPath = new THREE.CatmullRomCurve3(points3D, false, 'centripetal', 0.5);
+                        const sweepSettings = { steps: 120, bevelEnabled: false, extrudePath: sweepPath };
                         
-                        // 3. 执行扫掠放样挤出
-                        const sweepSettings = { steps: 100, bevelEnabled: false, extrudePath: sweepPath };
                         const geometry = new THREE.ExtrudeGeometry(shape, sweepSettings);
                         newMesh = new THREE.Mesh(geometry, mat);
                     }
