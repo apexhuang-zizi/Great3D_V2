@@ -627,13 +627,46 @@
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
         // 视口快捷导航控制
+        // ================= 补丁 1：智能视角居中与全景缩放 =================
         window.setCameraView = (view) => {
-            const dist = 1200;
-            if(view === 'iso') camera.position.set(800, 800, 800);
-            else if(view === 'top') camera.position.set(0, dist, 0);
-            else if(view === 'front') camera.position.set(0, 0, dist);
-            else if(view === 'right') camera.position.set(dist, 0, 0);
-            controls.target.set(0,0,0);
+            // 1. 计算当前场景中所有实体的总包围盒
+            const bounds = new THREE.Box3();
+            let hasObjects = false;
+            partsList.forEach(p => {
+                bounds.expandByObject(p.mesh);
+                hasObjects = true;
+            });
+
+            // 如果场景是空的，就围绕原点建立默认包围盒
+            if (!hasObjects) {
+                bounds.set(new THREE.Vector3(-200,-200,-200), new THREE.Vector3(200,200,200));
+            }
+
+            const center = new THREE.Vector3();
+            const size = new THREE.Vector3();
+            bounds.getCenter(center);
+            bounds.getSize(size);
+
+            // 2. 根据物体尺寸动态计算相机应当后退的距离，确保完全可见
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            cameraZ *= 1.4; // 留出 40% 的安全边距
+
+            // 3. 让轨道控制器聚焦在物体的几何中心
+            controls.target.copy(center);
+
+            // 4. 根据选定的视图方向，设定相机空间坐标
+            if (view === 'iso') {
+                camera.position.set(center.x + cameraZ, center.y + cameraZ, center.z + cameraZ);
+            } else if (view === 'top') {
+                camera.position.set(center.x, center.y + cameraZ, center.z);
+            } else if (view === 'front') {
+                camera.position.set(center.x, center.y, center.z + cameraZ);
+            } else if (view === 'right') {
+                camera.position.set(center.x + cameraZ, center.y, center.z);
+            }
+
             controls.update();
         };
 
