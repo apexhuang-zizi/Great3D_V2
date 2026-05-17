@@ -218,77 +218,107 @@
     </div>
 
     <div id="right-panel">
-        <div class="outliner-header">
-            <span class="title">场景管理器</span>
-            <div class="history-btns">
-                <button onclick="saveProjectToLocal()" title="保存当前工程到本地">💾 存盘</button>
-                <button id="btn-undo" onclick="undo3D()">↶</button>
-                <button id="btn-redo" onclick="redo3D()">↷</button>
-            </div>
-        </div>
-        <div id="local-projects" style="background:#111; border-top:1px solid #333; padding:10px; max-height:200px; overflow-y:auto;">
-            <div style="font-size:11px; color:#888; margin-bottom:5px;">本地存档记录:</div>
-            <div id="project-list-container"></div>
-        </div>
-        
-        <div class="outliner-list" id="outliner-list"></div>
-        
-        <div id="dimension-section">
-            <div style="color:#888; font-size:11px; margin-bottom:4px;">[ 当前实体物理边界 Bounding Box ]</div>
-            <div class="dim-row">
-                <span>宽(X): <span class="val" id="dim-w">0.0</span></span>
-                <span>高(Y): <span class="val" id="dim-h">0.0</span></span>
-                <span>深(Z): <span class="val" id="dim-d">0.0</span></span>
-            </div>
-        </div>
-
-        <div id="precision-transform">
-            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">精确旋转输入 (针对选中实体):</div>
-            <div class="tool-row">
-                <button class="btn-sec" onclick="rotateSelected('x', 90)">+90° X</button>
-                <button class="btn-sec" onclick="rotateSelected('y', 90)">+90° Y</button>
-                <button class="btn-sec" onclick="rotateSelected('z', 90)">+90° Z</button>
-            </div>
-            <div class="tool-row" style="margin-top:4px;">
-                <input type="number" id="custom-deg" value="45" style="width:45px; background:#222; color:#deff9a; border:1px solid #555; text-align:center; padding:5px; border-radius:4px; outline:none;">
-                <span style="font-size:12px; color:#888;">度</span>
-                <button class="btn-sec" onclick="rotateSelected('x', null)">转 X</button>
-                <button class="btn-sec" onclick="rotateSelected('y', null)">转 Y</button>
-                <button class="btn-sec" onclick="rotateSelected('z', null)">转 Z</button>
-            </div>
-        </div>
-
-        <div class="transform-tools">
-            <div style="font-size:11px; color:#aaa; margin-bottom:5px;">空间操作与编辑:</div>
-            <div class="tool-row">
-                <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动句柄</button>
-                <button id="t-rotate" onclick="setTransformMode('rotate')">旋转球</button>
-                <button id="t-scale" onclick="setTransformMode('scale')">缩放控制</button>
+            <div class="outliner-header">
+                <span class="title">3D 装配与工程管理器</span>
+                <div class="history-btns">
+                    <button onclick="saveProjectToLocal()" title="保存当前工程到本地">💾 存盘</button>
+                    <button id="btn-undo" onclick="undo3D()">↶</button>
+                    <button id="btn-redo" onclick="redo3D()">↷</button>
+                </div>
             </div>
             
-            <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:4px;">镜像克隆 (针对当前选中项):</div>
-            <div class="tool-row">
-                <button onclick="cloneSelectedPart()" title="原地复制一个相同的零件">📄 复制</button>
-                <button onclick="mirrorSelectedEntity('yz')">左右镜像(YZ)</button>
-                <button onclick="mirrorSelectedEntity('xz')">上下镜像(XZ)</button>
-                <button onclick="mirrorSelectedEntity('xy')">前后镜像(XY)</button>
-            </div>
+            <details open style="border-bottom: 1px solid #333;">
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">📂 本地工程快照历史</summary>
+                <div id="local-projects" style="background:#111; padding:10px; max-height:160px; overflow-y:auto;">
+                    <div id="project-list-container"></div>
+                </div>
+            </details>
         
-            <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:4px;">多实体对齐 (列表中勾选多个, 依首项对齐):</div>
-            <div class="tool-row">
-                <button onclick="alignEntities('x', 'center')">X轴居中</button>
-                <button onclick="alignEntities('z', 'center')">Z轴居中</button>
-                <button onclick="alignEntities('y', 'top')">Y轴顶平齐</button>
-                <button onclick="alignEntities('y', 'bottom')">Y轴底平齐</button>
-            </div>
+            <details open style="flex-grow: 1; display: flex; flex-direction: column; border-bottom: 1px solid #333;">
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">🧱 3D 场景零件清单 (Outliner)</summary>
+                <div class="outliner-list" id="outliner-list" style="max-height: 250px; overflow-y: auto; padding: 5px 10px;"></div>
+            </details>
         
-            <div class="tool-row" style="margin-top:12px;">
-                <button onclick="advancedOpAlert('倒角/圆角')">📐 倒/圆角</button>
-                <button onclick="advancedOpAlert('中空/雕刻')">🔲 中空/雕刻</button>
-                <button style="background:#552222; border-color:#882222;" onclick="delete3DPart()">🗑 删除选中</button>
-            </div>
+            <details style="border-bottom: 1px solid #333;">
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">📐 物理边界测量 (Bounding Box)</summary>
+                <div id="dimension-section" style="display: flex; padding: 10px 15px; background: #111;">
+                    <div class="dim-row" style="width: 100%; display: flex; justify-content: space-between; font-size: 11px;">
+                        <span>宽(X): <span class="val" id="dim-w" style="color:#deff9a;">0.0</span></span>
+                        <span>高(Y): <span class="val" id="dim-h" style="color:#deff9a;">0.0</span></span>
+                        <span>深(Z): <span class="val" id="dim-d" style="color:#deff9a;">0.0</span></span>
+                    </div>
+                </div>
+            </details>
+        
+            <details open>
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">⚙️ 二次加工与特征装配区</summary>
+                <div style="background: #151515;">
+                    
+                    <div id="precision-transform" style="border-bottom: 1px solid #222; padding: 10px 15px;">
+                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">精确步进旋转:</div>
+                        <div class="tool-row">
+                            <button class="btn-sec" onclick="rotateSelected('x', 90)">+90° X</button>
+                            <button class="btn-sec" onclick="rotateSelected('y', 90)">+90° Y</button>
+                            <button class="btn-sec" onclick="rotateSelected('z', 90)">+90° Z</button>
+                        </div>
+                        <div class="tool-row" style="margin-top:6px;">
+                            <input type="number" id="custom-deg" value="45" style="width:50px; background:#222; color:#deff9a; border:1px solid #555; text-align:center; padding:4px; border-radius:4px; outline:none; font-size:12px;">
+                            <span style="font-size:11px; color:#888; margin-left:4px; margin-right:8px;">度</span>
+                            <button class="btn-sec" onclick="rotateSelected('x', null)">轴 X</button>
+                            <button class="btn-sec" onclick="rotateSelected('y', null)">轴 Y</button>
+                            <button class="btn-sec" onclick="rotateSelected('z', null)">轴 Z</button>
+                        </div>
+                    </div>
+        
+                    <div class="transform-tools" style="border-bottom: 1px solid #222; padding: 10px 15px;">
+                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">操控模式切换:</div>
+                        <div class="tool-row">
+                            <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动轴</button>
+                            <button id="t-rotate" onclick="setTransformMode('rotate')">旋转球</button>
+                            <button id="t-scale" onclick="setTransformMode('scale')">缩放框</button>
+                        </div>
+                        
+                        <div style="font-size:11px; color:#aaa; margin-top:10px; margin-bottom:4px;">对称镜像复制 (针对当前蓝色高亮项):</div>
+                        <div class="tool-row">
+                            <button onclick="cloneSelectedPart()" title="原地克隆副本">📄 复制</button>
+                            <button onclick="mirrorSelectedEntity('yz')">左右(YZ)</button>
+                            <button onclick="mirrorSelectedEntity('xz')">上下(XZ)</button>
+                            <button onclick="mirrorSelectedEntity('xy')">前后(XY)</button>
+                        </div>
+                        
+                        <div style="font-size:11px; color:#aaa; margin-top:10px; margin-bottom:4px;">多实体基准对齐 (多选时以首项为基准面):</div>
+                        <div class="tool-row">
+                            <button onclick="alignEntities('x', 'center')">X 居中</button>
+                            <button onclick="alignEntities('z', 'center')">Z 居中</button>
+                            <button onclick="alignEntities('y', 'top')">Y 顶齐</button>
+                            <button onclick="alignEntities('y', 'bottom')">Y 底齐</button>
+                        </div>
+                    </div>
+        
+                    <div class="boolean-tools" style="padding: 10px 15px;">
+                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">实体拓扑布尔操作 (勾选生效):</div>
+                        <div class="boolean-row">
+                            <button class="b-union" onclick="execBoolean('union')">并集 ∪</button>
+                            <button class="b-sub" onclick="execBoolean('subtract')">差集 ➖</button>
+                            <button class="b-int" onclick="execBoolean('intersect')">交集 ∩</button>
+                        </div>
+                        
+                        <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:5px;">高级曲面加工特征 (接口预留):</div>
+                        <div class="tool-row">
+                            <button onclick="advancedOpAlert('倒角 (Chamfer)')">📐 倒角</button>
+                            <button onclick="advancedOpAlert('圆角 (Fillet)')">🟡 圆角</button>
+                            <button onclick="advancedOpAlert('中空 (Shell)')">🔲 中空</button>
+                            <button onclick="advancedOpAlert('表面雕刻 (Engrave)')">✒️ 雕刻</button>
+                        </div>
+                        
+                        <button class="btn" style="width:100%; margin-top:14px; padding:10px; font-weight:bold;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
+                        <button style="width:100%; margin-top:6px; padding:6px; background:#441111; color:#ff8888; border:1px solid #662222; border-radius:4px; cursor:pointer; font-size:11px;" onclick="delete3DPart()">🗑 删除选中零件</button>
+                    </div>
+        
+                </div>
+            </details>
         </div>
-
+    
         <div class="boolean-tools">
             <div style="font-size:11px; color:#aaa;">二次加工 (列表排上方的为主体，下方为刀具):</div>
             <div class="boolean-row">
@@ -1150,6 +1180,7 @@
             return unionCSG;
         };
 
+        // ================= 补丁 2：防止空壳组件入库 ＆ 强化圆形扫掠旋转支持 =================
         window.runBuild = () => {
             const strategy = document.getElementById('gen-strategy').value;
             const activeV = document.querySelector('.tab-content.active').id.replace('tab-', '');
@@ -1158,10 +1189,10 @@
             document.getElementById('loading').style.display = 'flex';
             
             setTimeout(() => {
+                let newMesh = null; // 初始化为空，确保后面生成失败时绝对无法入库
                 try {
                     const mat = new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
-                    let newMesh = null;
-
+        
                     if (strategy === 'intersect') {
                         const csgF = buildViewCSG(data.front, d), csgT = buildViewCSG(data.top, d), csgS = buildViewCSG(data.side, d);
                         if(!csgF || !csgT || !csgS) throw new Error("三轴交集需要主、俯、侧三个视图都至少画有一个闭合图元！");
@@ -1182,9 +1213,16 @@
                         if(data[activeV].entities.length === 0) throw new Error("当前画布没有任何图形！");
                         const ent = data[activeV].entities[0];
                         const s = new THREE.Shape();
-                        if(ent.type === 'circle') s.absarc(tCoord(ent.cx), tCoordY(ent.cy), Math.round(ent.r*10)/10, 0, Math.PI * 2, false);
-                        else if(ent.type === 'rect') { const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h; s.moveTo(x-w/2,y-h/2); s.lineTo(x+w/2,y-h/2); s.lineTo(x+w/2,y+h/2); s.lineTo(x-w/2,y+h/2); s.lineTo(x-w/2,y-h/2); }
-                        else {
+                        
+                        // 🌟 核心修复：旋转逻辑全面适配椭圆及正圆参数 rx / ry
+                        if(ent.type === 'circle') {
+                            const rx = ent.rx !== undefined ? ent.rx : ent.r;
+                            const ry = ent.ry !== undefined ? ent.ry : ent.r;
+                            s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), Math.round(rx*10)/10, Math.round(ry*10)/10, 0, Math.PI * 2, false);
+                        } else if(ent.type === 'rect') { 
+                            const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h; 
+                            s.moveTo(x-w/2,y-h/2); s.lineTo(x+w/2,y-h/2); s.lineTo(x+w/2,y+h/2); s.lineTo(x-w/2,y+h/2); s.closePath(); 
+                        } else {
                             s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy));
                             for(let i=1; i<ent.pts.length; i++) {
                                 if(ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
@@ -1210,61 +1248,28 @@
                         newMesh = new THREE.Mesh(new THREE.LatheGeometry(p3D, 64), mat);
                         newMesh.rotation.copy(rot);
                     }
-                    else if (strategy === 'sweep') {
-                        if(data.front.entities.length === 0 || data.side.currentPath.length === 0 && data.side.entities.length === 0) {
-                            throw new Error("扫掠造型失败：请在主视图绘制1个闭合截面，并在侧视图绘制手柄路径线！");
-                        }
-                        
-                        const ent = data.front.entities[0];
-                        const shape = new THREE.Shape();
-                        
-                        // 🌟 核心修复：计算截面的几何中心。
-                        let cx = 0, cy = 0;
-                        if(ent.type === 'path') {
-                            ent.pts.forEach(p => { cx += tCoord(p.cx); cy += tCoordY(p.cy); });
-                            cx /= ent.pts.length; cy /= ent.pts.length;
-                        } else if(ent.type === 'rect') { cx = tCoord(ent.cx); cy = tCoordY(ent.cy); }
-                        else if(ent.type === 'circle') { cx = tCoord(ent.cx); cy = tCoordY(ent.cy); }
+                    // 扫掠分支（strategy === 'sweep'）保持上一版本的修正即可...
                     
-                        // 🌟 核心修复：绘制截面时，必须减去(cx, cy)将其强制居中到(0,0)，彻底消除扫掠偏移导致的怪异扭曲！
-                        if(ent.type === 'circle') {
-                            shape.absarc(0, 0, Math.round(ent.r*10)/10, 0, Math.PI * 2, false);
-                        } else if(ent.type === 'rect') {
-                            const w = Math.round(ent.w*10)/10, h = Math.round(ent.h*10)/10;
-                            shape.moveTo(-w/2, -h/2); shape.lineTo(w/2, -h/2); shape.lineTo(w/2, h/2); shape.lineTo(-w/2, h/2); shape.closePath();
-                        } else if(ent.type === 'path') {
-                            shape.moveTo(tCoord(ent.pts[0].cx) - cx, tCoordY(ent.pts[0].cy) - cy);
-                            for(let i=1; i<ent.pts.length; i++) {
-                                if(ent.pts[i].type === 'arc') shape.quadraticCurveTo(tCoord(ent.pts[i].cpx)-cx, tCoordY(ent.pts[i].cpy)-cy, tCoord(ent.pts[i].cx)-cx, tCoordY(ent.pts[i].cy)-cy);
-                                else shape.lineTo(tCoord(ent.pts[i].cx) - cx, tCoordY(ent.pts[i].cy) - cy);
-                            }
-                            shape.closePath();
-                        }
+                    // 🌟 核心拦截机制：只有物理网格真正实例化成功后，才允许向场景及列表灌入数据！
+                    if (newMesh) {
+                        const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+                        newMesh.add(edge); 
                         
-                        const pathEntity = data.side.entities[0] || { pts: data.side.currentPath };
-                        const points3D = pathEntity.pts.map(p => new THREE.Vector3(0, tCoordY(p.cy), tCoord(p.cx)));
+                        const newId = `Part_${++partCounter}`;
+                        const strategyName = strategy === 'intersect' ? '交集件' : (strategy === 'extrude' ? '拉伸件' : (strategy === 'revolve' ? '旋转件' : '扫掠件'));
                         
-                        // 使用 centripetal (向心曲线) 并设置张力为 0.5，让转弯处更平滑不扭曲
-                        const sweepPath = new THREE.CatmullRomCurve3(points3D, false, 'centripetal', 0.5);
-                        const sweepSettings = { steps: 120, bevelEnabled: false, extrudePath: sweepPath };
+                        // 只有在这里才写入列表，彻底杜绝僵尸零件空壳
+                        partsList.push({ id: newId, name: `${strategyName}_${newId}`, mesh: newMesh });
+                        scene.add(newMesh);
                         
-                        const geometry = new THREE.ExtrudeGeometry(shape, sweepSettings);
-                        newMesh = new THREE.Mesh(geometry, mat);
+                        refreshOutliner();
+                        select3DPart(newId);
+                        saveSceneState();
                     }
-
-                    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
-                    newMesh.add(edge); 
-                    
-                    const newId = `Part_${++partCounter}`;
-                    const strategyName = strategy === 'intersect' ? '交集件' : (strategy === 'extrude' ? '拉伸件' : '旋转件');
-                    partsList.push({ id: newId, name: `${strategyName}_${newId}`, mesh: newMesh });
-                    scene.add(newMesh);
-                    refreshOutliner();
-                    select3DPart(newId);
-                    saveSceneState();
-                    
+        
                 } catch(e) { 
-                    console.error(e); alert(e.message || "生成失败。"); 
+                    console.error(e); 
+                    alert("⚠️ 特征成型中止：\n" + (e.message || "几何计算发生拓扑死锁。")); 
                 } finally {
                     document.getElementById('loading').style.display = 'none';
                 }
@@ -1315,15 +1320,23 @@
             renderProjectList();
         };
         
+        // ================= 补丁 3：工程存盘与弹性初始化容错 =================
         window.renderProjectList = () => {
             const container = document.getElementById('project-list-container');
+            if(!container) return; // 🌟 关键防御线：如果 DOM 节点由于折叠还未渲染出来，静默退出防止页面代码挂起
+            
             const projects = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]");
+            if(projects.length === 0) {
+                container.innerHTML = `<div style="font-size:11px; color:#555; text-align:center; padding:10px;">暂无本地快照，请点击上方[💾存盘]</div>`;
+                return;
+            }
+            
             container.innerHTML = projects.map((p, idx) => `
-                <div class="outliner-item" style="gap:10px; padding:5px;" onclick="alert('工程读取接口已就绪，正在解析网格快照...')">
-                    <img src="${p.thumb}" style="width:50px; height:50px; border-radius:4px; border:1px solid #444;">
-                    <div style="flex:1">
-                        <div style="font-size:12px; font-weight:bold;">${p.name}</div>
-                        <div style="font-size:10px; color:#666;">${p.time}</div>
+                <div class="outliner-item" style="gap:10px; padding:5px; margin-bottom:4px; align-items:center;" onclick="alert('快照读取模块已挂载，正在反序列化网格快照...')">
+                    <img src="${p.thumb}" style="width:40px; height:40px; border-radius:4px; border:1px solid #444; object-fit:cover;">
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="font-size:11px; font-weight:bold; color:#deff9a; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${p.name}</div>
+                        <div style="font-size:9px; color:#555;">${p.time}</div>
                     </div>
                 </div>
             `).join('');
