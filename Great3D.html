@@ -484,6 +484,42 @@
             if(activePanView) { document.getElementById(`container-${activePanView}`).style.cursor = 'default'; activePanView = null; }
         });
 
+        // ================= 补丁 5：恢复 Ctrl+V 粘贴底图与按钮导入功能 =================
+        // 1. 恢复：点击“📁 导入底图”按钮的读取功能
+        window.loadImg = (event, v) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById(`img-${v}`).src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        // 2. 增强：全局监听 Ctrl+V 直接粘贴剪贴板图片
+        window.addEventListener('paste', (e) => {
+            // 识别当前激活的是哪个视图 (主视/俯视/侧视)
+            const activeTab = document.querySelector('.tab-content.active');
+            if (!activeTab) return;
+            const v = activeTab.id.replace('tab-', '');
+            
+            // 遍历剪贴板内容，寻找图片
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        // 将读取到的图片直接赋值给当前画布底下的 img 标签
+                        document.getElementById(`img-${v}`).src = event.target.result;
+                    };
+                    reader.readAsDataURL(blob);
+                    break; // 找到第一张图片就停止，防止粘贴多张导致卡顿
+                }
+            }
+        });
+        
         views.forEach(v => {
             const container = document.getElementById(`container-${v}`);
             const wrap = document.getElementById(`zoom-wrap-${v}`);
