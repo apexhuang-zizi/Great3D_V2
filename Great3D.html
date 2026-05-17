@@ -286,21 +286,27 @@
         import { CSG } from 'three-csg-ts';
 
         // ================= UI 布局交互 (智能防冲突隐藏) =================
+        // ================= 补丁 2：全屏彻底居中与 UI 净化 =================
         window.toggleMax = (v) => { 
             const container = document.getElementById(`container-${v}`);
             const isFull = container.classList.toggle('fullscreen'); 
-            
-            // 全屏时智能隐藏所有可能遮挡画布的浮窗
+    
+            // 隐藏 3D 操作指南、快捷视角块和中间的收起/展开拨片
             document.getElementById('viewport-hints').style.display = isFull ? 'none' : 'block';
             document.getElementById('view-cube').style.display = isFull ? 'none' : 'flex';
-            
+            document.getElementById('toggle-panel-btn').style.display = isFull ? 'none' : 'block';
+    
+            // 强制画布全屏时居中处理
             if(isFull) {
+                container.style.display = 'flex';
+                container.style.justifyContent = 'center';
+                container.style.alignItems = 'center';
                 window._prevRightPanelDisplay = document.getElementById('right-panel').style.display;
                 document.getElementById('right-panel').style.display = 'none';
             } else {
+                container.style.display = 'flex';
                 document.getElementById('right-panel').style.display = window._prevRightPanelDisplay || 'none';
             }
-            // 延迟触发 resize 修正可能错位的 3D 画布
             setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
         };
 
@@ -564,14 +570,48 @@
                 }
             });
 
-            cv.addEventListener('mousemove', (e) => {
-                if(data[v].mode === 'select' && dragState) {
-                    let { cx, cy } = getCanvasCoords(v, e);
-                    dragState.ent.cx = dragState.origCx + (cx - dragState.startX);
-                    dragState.ent.cy = dragState.origCy + (cy - dragState.startY);
-                    renderCanvas(v);
-                }
-            });
+            // ================= 补丁 3：实时的弧度控制拉伸预览 =================
+        cv.addEventListener('mousemove', (e) => {
+            let { cx, cy } = getCanvasCoords(v, e);
+
+            if(data[v].mode === 'select' && dragState) {
+                dragState.ent.cx = dragState.origCx + (cx - dragState.startX);
+                dragState.ent.cy = dragState.origCy + (cy - dragState.startY);
+                renderCanvas(v);
+            } 
+            // 当处于弧度调整阶段 (arcState === 1) 时，实时重绘带控制线和动态虚线的画布
+            else if (data[v].mode === 'arc' && data[v].arcState === 1) {
+                renderCanvas(v); // 先画底层稳定图元
+        
+                const cvEl = document.getElementById(`cv-${v}`);
+                const ctx = cvEl.getContext('2d');
+                const cPath = data[v].currentPath;
+                const startP = cPath[cPath.length - 1]; // 弧线起点
+                const endP = data[v].tempArcEnd;       // 弧线终点
+
+                // 绘制实时变化的二次贝塞尔弧线（黄色虚线）
+                ctx.strokeStyle = '#ff9900';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(startP.cx, startP.cy);
+                ctx.quadraticCurveTo(cx, cy, endP.cx, endP.cy); // 鼠标当前点作为控制点
+                ctx.stroke();
+
+                // 绘制控制柄辅助线（白色细线）
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(startP.cx, startP.cy); ctx.lineTo(cx, cy);
+                ctx.lineTo(endP.cx, endP.cy);
+                ctx.stroke();
+                ctx.setLineDash([]); // 恢复实线
+
+                // 绘制当前鼠标控制点小圆圈
+                ctx.fillStyle = '#ff9900';
+                ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
+            }
+        });
             cv.addEventListener('mouseup', () => { dragState = null; });
             
             window.undoPath = (vv) => { 
@@ -838,91 +878,96 @@
         const getCheckedParts = () => partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked);
 
         // ================= ★ 微米级容差防崩的布尔引擎 (Auto-Epsilon Rescue) =================
+        // ================= 补丁 4：烘焙级矩阵解耦防崩溃布尔引擎 =================
         window.execBoolean = (operation) => {
             const checked = getCheckedParts();
             if(operation === 'union' && checked.length < 2) return alert("求和运算请至少勾选 2 个及以上的实体！");
-            if(operation !== 'union' && checked.length !== 2) return alert("求差/求交运算请严格勾选 2 个实体！\n(排在上方的主体，减去下方的刀具)");
-            
+            if(operation !== 'union' && checked.length !== 2) return alert("求差/求交运算请严格勾选 2 个实体！");
+    
             document.getElementById('loading').style.display = 'flex';
-            
+    
             setTimeout(() => {
-                const safeHistoryIdx = historyIndex; // 记录绝对安全存档
-                
+                const safeHistoryIdx = historyIndex;
+        
                 try {
                     saveSceneState();
-                    checked.forEach(p => p.mesh.updateMatrixWorld(true));
-                    
-                    const doCSG = (meshA, meshB, op) => {
-                        const csgA = CSG.fromMesh(meshA, meshA.matrixWorld);
-                        const csgB = CSG.fromMesh(meshB, meshB.matrixWorld);
-                        if (op === 'union') return csgA.union(csgB);
-                        if (op === 'subtract') return csgA.subtract(csgB);
-                        if (op === 'intersect') return csgA.intersect(csgB);
+            
+                    // 安全清洗函数：将 Transform 转换为绝对底层顶点，切断一切因缩放、克隆导致的矩阵死锁
+                    const cleanAndExtractCSG = (part) => {
+                        part.mesh.updateMatrixWorld(true);
+                        const tempGeometry = part.mesh.geometry.clone();
+                        // 核心：把所有平移、旋转、缩放直接“砸入”几何顶点数据中，变成干净的绝对世界坐标
+                        tempGeometry.applyMatrix4(part.mesh.matrixWorld);
+                
+                        const tempMesh = new THREE.Mesh(tempGeometry);
+                        tempMesh.position.set(0, 0, 0);
+                        tempMesh.rotation.set(0, 0, 0);
+                        tempMesh.scale.set(1, 1, 1);
+                        tempMesh.updateMatrixWorld(true);
+                
+                        return CSG.fromMesh(tempMesh);
                     };
 
-                    let resultCSG;
+                    let resultCSG = cleanAndExtractCSG(checked[0]);
                     let isRescueTriggered = false;
 
                     try {
-                        // 尝试第一次精准运算
-                        if(operation === 'union') {
-                            resultCSG = CSG.fromMesh(checked[0].mesh, checked[0].mesh.matrixWorld);
+                      if(operation === 'union') {
                             for (let i = 1; i < checked.length; i++) {
-                                resultCSG = resultCSG.union(CSG.fromMesh(checked[i].mesh, checked[i].mesh.matrixWorld));
+                                resultCSG = resultCSG.union(cleanAndExtractCSG(checked[i]));
                             }
                         } else {
-                            resultCSG = doCSG(checked[0].mesh, checked[1].mesh, operation);
+                            const csgB = cleanAndExtractCSG(checked[1]);
+                            if(operation === 'subtract') resultCSG = resultCSG.subtract(csgB); 
+                            else if(operation === 'intersect') resultCSG = resultCSG.intersect(csgB);
                         }
                         if (!resultCSG || resultCSG.polygons.length === 0) throw new Error("EmptyResult");
                     } catch (primaryError) {
-                        // ★ 核心修复：共面零容差拦截与微米级抖动抢救
-                        console.warn("Primary CSG calculation failed. Attempting Epsilon Rescue...");
+                        // 微米抖动抢救（专治完美的共面死锁）
                         isRescueTriggered = true;
-                        
-                        if(operation === 'union') throw new Error("求和失败，模型可能没有任何接触。");
+                        if(operation === 'union') throw new Error("求和失败，物体之间可能未发生接触。");
 
-                        // 拷贝一个刀具，并将其微移 0.001 毫米，打破几何学上的完美共面死锁
-                        const rescueTool = checked[1].mesh.clone();
-                        rescueTool.position.x += 0.001; 
-                        rescueTool.position.y += 0.001; 
-                        rescueTool.position.z += 0.001; 
-                        rescueTool.updateMatrixWorld(true);
+                        const rescuedMeshB = checked[1].mesh.clone();
+                        rescuedMeshB.position.x += 0.002; // 微小非对称偏移
+                        rescuedMeshB.position.y += 0.002;
+                        rescuedMeshB.position.z += 0.002;
+                        rescuedMeshB.scale.multiplyScalar(1.0001); // 极其微小的放大，打破共面
+                        rescuedMeshB.updateMatrixWorld(true);
 
-                        resultCSG = doCSG(checked[0].mesh, rescueTool, operation);
+                        const csgB_rescued = cleanAndExtractCSG({ mesh: rescuedMeshB });
+                        if(operation === 'subtract') resultCSG = cleanAndExtractCSG(checked[0]).subtract(csgB_rescued);
+                        if(operation === 'intersect') resultCSG = cleanAndExtractCSG(checked[0]).intersect(csgB_rescued);
+                
                         if (!resultCSG || resultCSG.polygons.length === 0) throw new Error("RescueFailed");
                     }
-                    
+            
+                    // 后面生成新Mesh的逻辑保持原样...
                     const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide });
                     const newMesh = CSG.toMesh(resultCSG, new THREE.Matrix4(), mat);
-                    
                     const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
                     newMesh.add(edge);
-                    
+            
                     checked.forEach(part => {
                         scene.remove(part.mesh);
                         partsList.splice(partsList.indexOf(part), 1);
                     });
-                    
+            
                     tControls.detach();
                     document.getElementById('dimension-section').style.display = 'none';
                     document.getElementById('precision-transform').style.display = 'none';
-                    
+            
                     const newId = `Part_${++partCounter}`;
                     partsList.push({ id: newId, name: `布尔处理件_${newId}`, mesh: newMesh });
                     scene.add(newMesh);
-                    
+            
                     refreshOutliner();
                     select3DPart(newId);
                     saveSceneState(); 
-                    
-                    if(isRescueTriggered) {
-                        console.log("Successfully resolved coplanar conflict using Epsilon Rescue.");
-                    }
-                    
+            
                 } catch(e) {
-                    // 若两次均失败，执行时光机完美恢复
+                    console.error(e);
                     loadState(safeHistoryIdx); 
-                    alert("⚠️ 布尔运算失败：\n" + (e.message === 'RescueFailed' ? '两物体完美共面或完全无接触，无法切削。' : '拓扑结构极其复杂导致崩溃。') + "\n\n🔧 智能保护：您的模型已免遭破坏并完美恢复原状！");
+                    alert("⚠️ 布尔运算失败：拓扑重合度过高或发生零截面。\n\n🔧 智能抢救：系统已完美拦截崩溃并恢复原模型！建议将切削体稍微移动 0.1mm 后重试。");
                 } finally {
                     document.getElementById('loading').style.display = 'none';
                 }
