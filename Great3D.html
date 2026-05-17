@@ -2,16 +2,15 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>APEX CAD ENGINE - PRO 装配版</title>
+    <title>APEX CAD ENGINE - PRO 满血装配版</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; }
+        body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; flex-direction: row; }
         
-        /* 左侧面板与折叠动画 */
-        #left-panel { width: 480px; min-width: 480px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        /* === 左侧 2D 绘图面板 === */
+        #left-panel { flex: 0 0 480px; width: 480px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         #left-panel.collapsed { margin-left: -480px; }
         
         .panel-header { padding: 20px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        
         .top-settings { padding: 15px 20px; background: #0a0a0a; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
         .top-settings select { background: #222; color: #deff9a; border: 1px solid #444; padding: 6px; border-radius: 4px; outline: none; width: 100%; font-weight: bold; }
         
@@ -22,13 +21,10 @@
         .tab-content.active { display: flex; flex-direction: column; }
         
         .canvas-container { width: 100%; aspect-ratio: 1/1; background: #000; border: 1px solid #333; position: relative; margin: 10px 0; display: flex; justify-content: center; align-items: center; border-radius: 8px; transition: all 0.3s; overflow: hidden; }
-        .canvas-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; border-radius: 0; border: none; margin: 0; background: #0a0a0a; }
-        
         canvas { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; z-index: 2; cursor: crosshair; }
         canvas.mode-select { cursor: default; }
         .bg-img { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; object-fit: contain; opacity: 0.4; pointer-events: none; z-index: 1; }
         
-        .max-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: #ccc; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; z-index: 10; }
         .top-floating-tools { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
         .bottom-floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 10; }
         
@@ -49,45 +45,54 @@
         .action-bar { padding: 20px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
         .depth-input { background:#000; color:#deff9a; border:1px solid #444; padding:6px; border-radius: 4px; outline: none; }
         
-        /* 3D 区域与装配面板 */
-        #right-panel { flex-grow: 1; position: relative; background: #0d0d0d; }
+        /* === 中间 3D 视窗 === */
+        #center-viewport { flex: 1 1 auto; position: relative; background: #0d0d0d; display: flex; flex-direction: column; }
         #loading { position: absolute; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; font-weight:bold; color: #deff9a; font-size: 20px; }
         
         /* 侧边折叠拨片 */
         #toggle-panel-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); background: #222; color: #deff9a; border: 1px solid #444; border-left: none; padding: 20px 5px; cursor: pointer; z-index: 1000; border-radius: 0 8px 8px 0; font-size: 12px; text-align: center; box-shadow: 2px 0 10px rgba(0,0,0,0.5); transition: 0.2s; }
         #toggle-panel-btn:hover { background: #444; color: #fff; }
 
-        /* 智能装配面板 (初始隐藏) */
-        #scene-outliner { position: absolute; top: 20px; right: 20px; width: 300px; background: rgba(15,15,15,0.95); border: 1px solid #444; border-radius: 8px; z-index: 10; display: none; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
-        .outliner-header { padding: 12px 15px; background: #222; border-bottom: 1px solid #444; font-weight: bold; font-size: 14px; color: #deff9a; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        /* 视窗操作指南 (解决找不到滑动按钮的问题) */
+        #viewport-hints { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #333; border-radius: 20px; padding: 8px 20px; color: #888; font-size: 12px; z-index: 10; pointer-events: none; }
+        #viewport-hints span { color: #deff9a; font-weight: bold; margin: 0 5px; }
+
+        #viewport { flex-grow: 1; width: 100%; height: 100%; }
+
+        /* === 右侧固定装配控制面板 === */
+        #right-panel { flex: 0 0 340px; width: 340px; background: #151515; border-left: 1px solid #333; display: none; flex-direction: column; z-index: 20; box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
         
-        .outliner-list { max-height: 200px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
-        .outliner-item { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 8px 10px; border-radius: 4px; border: 1px solid #333; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .outliner-header { padding: 15px; background: #222; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
+        .outliner-header .title { font-weight: bold; font-size: 14px; color: #deff9a; }
+        .history-btns button { background: #444; border: 1px solid #555; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 14px; cursor: pointer; transition: 0.2s; }
+        .history-btns button:hover:not(:disabled) { background: #deff9a; color: #000; }
+        .history-btns button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .outliner-list { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #111; }
+        .outliner-item { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 10px 12px; border-radius: 6px; border: 1px solid #333; font-size: 13px; cursor: pointer; transition: 0.2s; }
         .outliner-item:hover { border-color: #555; }
         .outliner-item.active { border-color: #deff9a; background: rgba(222,255,154,0.1); }
-        .outliner-item input[type="checkbox"] { margin-right: 10px; cursor: pointer; }
-        .item-name { flex-grow: 1; }
-        
-        /* 融合的尺寸侦测区域 */
-        #dimension-section { display: none; flex-direction: column; padding: 12px; background: #111; border-top: 1px solid #333; font-family: monospace; color: #deff9a; font-size: 13px; }
-        .dim-row { display: flex; justify-content: space-between; margin-top: 5px; }
-        .dim-row span.val { color: #fff; font-weight: bold; }
+        .outliner-item input[type="checkbox"] { margin-right: 12px; cursor: pointer; width: 16px; height: 16px; }
+        .item-name { flex-grow: 1; font-weight: bold; }
 
-        .transform-tools { display: flex; gap: 5px; padding: 10px; background: #1a1a1a; border-top: 1px solid #333; }
-        .transform-tools button { flex: 1; padding: 8px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        /* 融合的尺寸侦测区域 */
+        #dimension-section { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; font-family: monospace; color: #deff9a; font-size: 13px; display: none; flex-direction: column; }
+        .dim-row { display: flex; justify-content: space-between; margin-top: 8px; }
+        .dim-row span.val { color: #fff; font-weight: bold; font-size: 14px; }
+
+        .transform-tools { padding: 15px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+        .tool-row { display: flex; gap: 5px; }
+        .transform-tools button { flex: 1; padding: 10px 5px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; }
         .transform-tools button.active { background: #deff9a; color: #000; font-weight: bold; }
+        .transform-tools button:hover:not(.active) { background: #444; }
         
-        .boolean-tools { display: flex; flex-direction: column; gap: 8px; padding: 15px; background: #111; border-top: 1px solid #444; border-radius: 0 0 8px 8px; }
+        .boolean-tools { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
         .boolean-row { display: flex; gap: 8px; }
-        .boolean-row button { flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .boolean-row button { flex: 1; padding: 12px 5px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
         .boolean-row button:hover { background: #555; }
         .boolean-row button.b-union { border-left: 3px solid #4CAF50; }
         .boolean-row button.b-sub { border-left: 3px solid #F44336; }
         .boolean-row button.b-int { border-left: 3px solid #2196F3; }
-
-        #btn-3d-undo { background: #555; border: 1px solid #666; color: #fff; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; transition: 0.2s; }
-        #btn-3d-undo:hover { background: #777; }
-        #btn-3d-undo:disabled { opacity: 0.3; cursor: not-allowed; }
     </style>
     <script type="importmap">
         {
@@ -102,19 +107,19 @@
 <body>
     <div id="left-panel">
         <div class="panel-header">
-            <h3 style="margin:0; font-size:16px; color:#deff9a">APEX CAD ENGINE</h3>
+            <h3 style="margin:0; font-size:16px; color:#deff9a">APEX CAD 2D草图</h3>
             <a href="index.html" style="color:#666; text-decoration:none; font-size:12px">← BACK</a>
         </div>
         
         <div class="top-settings">
-            <div style="font-size:12px; color:#aaa; margin-bottom: 5px;"><i style="color:#deff9a">●</i> 1. 选择生成策略 (从草图生成实体):</div>
+            <div style="font-size:12px; color:#aaa; margin-bottom: 5px;"><i style="color:#deff9a">●</i> 1. 选择空间生成策略:</div>
             <select id="gen-strategy" onchange="toggleRevolveOptions()">
                 <option value="intersect">三轴布尔交集 (需绘制三视图)</option>
                 <option value="extrude">平面单向拉伸 (仅激活视图)</option>
                 <option value="revolve">单轴中心旋转 (仅激活视图)</option>
             </select>
             <div id="revolve-axis-container" style="display:none; justify-content:space-between; align-items:center; font-size:12px; color:#aaa; margin-top: 5px;">
-                <span>旋转中心轴:</span>
+                <span>旋转轴:</span>
                 <div class="mode-switch">
                     <input type="radio" name="r-axis" id="ra-x" value="X"><label for="ra-x">X 轴</label>
                     <input type="radio" name="r-axis" id="ra-y" value="Y" checked><label for="ra-y">Y 轴</label>
@@ -139,7 +144,6 @@
                         <input type="file" id="up-${v}" hidden onchange="loadImg(event, '${v}')">
                     </div>
                     <div class="canvas-container" id="container-${v}">
-                        <button class="max-btn" onclick="toggleMax('${v}')">⛶</button>
                         <div class="top-floating-tools">
                             <div class="mode-switch">
                                 <input type="radio" name="m-${v}" id="ms-${v}" value="select" checked onchange="setMode('${v}', 'select')"><label for="ms-${v}">↖ 选择</label>
@@ -173,47 +177,65 @@
                 <span><i style="color:#deff9a">●</i> 2. 设定生成深度:</span>
                 <input type="number" id="depth" class="depth-input" value="200" style="width:70px;">
             </div>
-            <button class="btn" style="padding:15px; font-size:14px; margin-top:5px;" onclick="runBuild()">➕ 实例化实体至场景</button>
+            <button class="btn" style="padding:15px; font-size:14px; margin-top:5px;" onclick="runBuild()">➕ 实例化实体至 3D 场景</button>
         </div>
     </div>
     
-    <div id="right-panel">
-        <div id="toggle-panel-btn" onclick="toggleLeftPanel()" title="收起/展开控制台">◀<br>收<br>起</div>
+    <div id="center-viewport">
+        <div id="toggle-panel-btn" onclick="toggleLeftPanel()" title="收起/展开绘图板">◀<br>收<br>起</div>
         <div id="loading">COMPUTING...</div>
-        
-        <div id="scene-outliner">
-            <div class="outliner-header">
-                <span id="part-count">0 个实体</span>
-                <button id="btn-3d-undo" onclick="undo3D()" disabled title="回退上一次 3D 操作">↶ 回退</button>
-            </div>
-            <div class="outliner-list" id="outliner-list"></div>
-            
-            <div id="dimension-section">
-                <div style="color:#888; font-size:11px; margin-bottom:4px;">[ 当前选中零件绝对尺寸 ]</div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>W(X): <span class="val" id="dim-w">0.0</span></span>
-                    <span>H(Y): <span class="val" id="dim-h">0.0</span></span>
-                    <span>D(Z): <span class="val" id="dim-d">0.0</span></span>
-                </div>
-            </div>
+        <div id="viewport-hints"><span>左键</span>旋转观察 | <span>右键</span>平移视口 | <span>滚轮</span>放大缩小</div>
+        <div id="viewport"></div>
+    </div>
 
-            <div class="transform-tools">
-                <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动 (W)</button>
-                <button id="t-rotate" onclick="setTransformMode('rotate')">旋转 (E)</button>
-                <button style="background:#552222; border-color:#882222;" onclick="delete3DPart()">删除选中</button>
+    <div id="right-panel">
+        <div class="outliner-header">
+            <span class="title">3D 场景与装配管理器</span>
+            <div class="history-btns">
+                <button id="btn-undo" onclick="undo3D()" disabled title="撤销上一步操作">↶</button>
+                <button id="btn-redo" onclick="redo3D()" disabled title="重做操作">↷</button>
             </div>
-            <div class="boolean-tools">
-                <div style="font-size:11px; color:#aaa; margin-bottom: 2px;">二次加工 (上层为被切主体，下层为刀具):</div>
-                <div class="boolean-row">
-                    <button class="b-union" onclick="execBoolean('union')">求和 ∪</button>
-                    <button class="b-sub" onclick="execBoolean('subtract')" title="A 减去 B">求差 ➖</button>
-                    <button class="b-int" onclick="execBoolean('intersect')">求交 ∩</button>
-                </div>
-                <button class="btn" style="width:100%; margin-top:5px; padding:10px;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
+        </div>
+        
+        <div class="outliner-list" id="outliner-list">
+            </div>
+        
+        <div id="dimension-section">
+            <div style="color:#888; font-size:11px; margin-bottom:4px;">[ 当前实体物理边界 Bounding Box ]</div>
+            <div class="dim-row">
+                <span>宽(X): <span class="val" id="dim-w">0.0</span></span>
+                <span>高(Y): <span class="val" id="dim-h">0.0</span></span>
+                <span>深(Z): <span class="val" id="dim-d">0.0</span></span>
             </div>
         </div>
 
-        <div id="viewport" style="width:100%; height:100%"></div>
+        <div class="transform-tools">
+            <div style="font-size:11px; color:#aaa;">空间操作与编辑:</div>
+            <div class="tool-row">
+                <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动</button>
+                <button id="t-rotate" onclick="setTransformMode('rotate')">旋转</button>
+                <button id="t-scale" onclick="setTransformMode('scale')">拉伸缩放</button>
+            </div>
+            <div class="tool-row">
+                <button onclick="cloneSelectedPart()">📄 复制实体</button>
+                <button style="background:#552222; border-color:#882222;" onclick="delete3DPart()">🗑 删除选中</button>
+            </div>
+            <div class="tool-row">
+                <button onclick="advancedOpAlert('倒角 (Chamfer)')">📐 倒角</button>
+                <button onclick="advancedOpAlert('圆角 (Fillet)')">🟡 圆角</button>
+                <button onclick="advancedOpAlert('中空 (Shell)')">🔲 中空</button>
+            </div>
+        </div>
+
+        <div class="boolean-tools">
+            <div style="font-size:11px; color:#aaa;">二次加工 (列表排上方的为主体，下为刀具):</div>
+            <div class="boolean-row">
+                <button class="b-union" onclick="execBoolean('union')">求和 ∪</button>
+                <button class="b-sub" onclick="execBoolean('subtract')" title="A 减去 B">求差 ➖</button>
+                <button class="b-int" onclick="execBoolean('intersect')">求交 ∩</button>
+            </div>
+            <button class="btn" style="width:100%; margin-top:5px; padding:12px;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
+        </div>
     </div>
 
     <script type="module">
@@ -224,37 +246,34 @@
         import { CSG } from 'three-csg-ts';
 
         // -------------------------------------------------------------
-        // 画布收放动画自适应处理
+        // UI 交互：折叠面板与尺寸重算
         // -------------------------------------------------------------
         window.toggleLeftPanel = () => {
             const lp = document.getElementById('left-panel');
             const btn = document.getElementById('toggle-panel-btn');
             lp.classList.toggle('collapsed');
+            btn.innerHTML = lp.classList.contains('collapsed') ? '▶<br>展<br>开' : '◀<br>收<br>起';
             
-            if(lp.classList.contains('collapsed')) {
-                btn.innerHTML = '▶<br>展<br>开';
-            } else {
-                btn.innerHTML = '◀<br>收<br>起';
-            }
-            
-            // 在动画期间高频触发 resize 保证 3D 画布平滑伸缩
             let steps = 0;
             const resizeInterval = setInterval(() => {
                 window.dispatchEvent(new Event('resize'));
-                steps++;
-                if(steps > 16) clearInterval(resizeInterval); // 动画约 320ms
+                if(++steps > 16) clearInterval(resizeInterval); 
             }, 20);
         };
 
+        window.advancedOpAlert = (name) => {
+            alert(`由于浏览器纯前端 WebGL 性能限制，实体级的【${name}】高级曲面功能正在接入云端 CAD 引擎。\n\n💡 目前替代方案：请直接在左侧 2D 草图中，利用画笔绘制出带圆角或中空的截面，然后进行拉伸生成！`);
+        };
+
         // -------------------------------------------------------------
-        // Canvas 2D 逻辑 
+        // Canvas 2D 绘图逻辑 (恢复了物理标尺数字)
         // -------------------------------------------------------------
         const views = ['front', 'top', 'side'];
         const CV_SIZE = 1000; 
         const data = { 
-            front: { entities: [], currentPath: [], mode: 'select', selectedId: null, tempArcEnd: null }, 
-            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null, tempArcEnd: null }, 
-            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null, tempArcEnd: null } 
+            front: { entities: [], currentPath: [], mode: 'select', selectedId: null }, 
+            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null }, 
+            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null } 
         };
         let entityIdCounter = 0;
 
@@ -263,7 +282,6 @@
             document.querySelector(`.tab[onclick="switchTab('${v}')"]`).classList.add('active');
             document.getElementById(`tab-${v}`).classList.add('active');
         };
-        window.toggleMax = (v) => { document.getElementById(`container-${v}`).classList.toggle('fullscreen'); };
         window.toggleRevolveOptions = () => { document.getElementById('revolve-axis-container').style.display = document.getElementById('gen-strategy').value === 'revolve' ? 'flex' : 'none'; };
 
         window.setMode = (v, mode) => { 
@@ -280,9 +298,20 @@
         const renderCanvas = (v) => {
             const cv = document.getElementById(`cv-${v}`); const ctx = cv.getContext('2d');
             ctx.clearRect(0,0,CV_SIZE,CV_SIZE);
+            
+            // 绘制网格
             ctx.strokeStyle = '#222'; ctx.lineWidth = 1; ctx.beginPath(); 
             for(let i=0; i<=CV_SIZE; i+=50){ ctx.moveTo(i,0);ctx.lineTo(i,CV_SIZE);ctx.moveTo(0,i);ctx.lineTo(CV_SIZE,i); } ctx.stroke();
             ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(CV_SIZE/2,0);ctx.lineTo(CV_SIZE/2,CV_SIZE);ctx.moveTo(0,CV_SIZE/2);ctx.lineTo(CV_SIZE,CV_SIZE/2); ctx.stroke();
+
+            // ★ 恢复绘制标尺数字
+            ctx.fillStyle = '#666'; ctx.font = '11px sans-serif';
+            for(let i=0; i<=CV_SIZE; i+=100) {
+                if(i !== CV_SIZE/2) {
+                    ctx.fillText((i - CV_SIZE/2), i + 4, CV_SIZE/2 - 4); // X 轴
+                    ctx.fillText((CV_SIZE/2 - i), CV_SIZE/2 + 4, i - 4); // Y 轴
+                }
+            }
 
             data[v].entities.forEach(ent => {
                 const isSelected = ent.id === data[v].selectedId;
@@ -402,7 +431,7 @@
         });
 
         // -------------------------------------------------------------
-        // 3D 架构：场景、历史时光机、安全布尔运算
+        // ★ 核心 3D 架构：场景、高级双向历史时光机、安全布尔运算
         // -------------------------------------------------------------
         const scene = new THREE.Scene(); 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 5000);
@@ -416,7 +445,7 @@
         
         tControls.addEventListener('dragging-changed', (e) => { 
             controls.enabled = !e.value; 
-            if(!e.value) saveSceneState(); 
+            if(!e.value) saveSceneState(); // 松开手柄保存历史
         });
         tControls.addEventListener('change', () => { updateHUD(); }); 
         scene.add(tControls);
@@ -430,49 +459,63 @@
         let partCounter = 0;
         let selected3DPartId = null;
 
+        // ★ 双向时光机 (Undo / Redo) 核心重构
         const sceneHistory = [];
-        const saveSceneState = () => {
-            const state = partsList.map(p => ({ id: p.id, name: p.name, mesh: p.mesh.clone() }));
-            sceneHistory.push(state);
-            if(sceneHistory.length > 20) sceneHistory.shift(); 
-            document.getElementById('btn-3d-undo').disabled = sceneHistory.length <= 1;
+        let historyIndex = -1;
+
+        const updateHistoryUI = () => {
+            document.getElementById('btn-undo').disabled = historyIndex <= 0;
+            document.getElementById('btn-redo').disabled = historyIndex >= sceneHistory.length - 1;
         };
 
-        window.undo3D = () => {
-            if(sceneHistory.length <= 1) return;
-            sceneHistory.pop(); 
-            const prevState = sceneHistory[sceneHistory.length - 1];
-            
+        const saveSceneState = () => {
+            // 如果在历史中间进行了新操作，则丢弃未来的重做历史
+            if (historyIndex < sceneHistory.length - 1) {
+                sceneHistory.splice(historyIndex + 1);
+            }
+            const state = partsList.map(p => ({ id: p.id, name: p.name, mesh: p.mesh.clone() }));
+            sceneHistory.push(state);
+            if (sceneHistory.length > 20) sceneHistory.shift(); 
+            historyIndex = sceneHistory.length - 1;
+            updateHistoryUI();
+        };
+
+        const loadState = (idx) => {
+            // 清理当前场景
             partsList.forEach(p => scene.remove(p.mesh));
             partsList.length = 0;
             tControls.detach();
             selected3DPartId = null;
             document.getElementById('dimension-section').style.display = 'none';
 
-            prevState.forEach(sp => {
+            // 载入目标状态
+            sceneHistory[idx].forEach(sp => {
                 const restoredMesh = sp.mesh.clone();
                 scene.add(restoredMesh);
                 partsList.push({ id: sp.id, name: sp.name, mesh: restoredMesh });
             });
             refreshOutliner();
-            document.getElementById('btn-3d-undo').disabled = sceneHistory.length <= 1;
+            updateHistoryUI();
         };
 
-        saveSceneState();
+        window.undo3D = () => { if(historyIndex > 0) { historyIndex--; loadState(historyIndex); } };
+        window.redo3D = () => { if(historyIndex < sceneHistory.length - 1) { historyIndex++; loadState(historyIndex); } };
 
-        // ★ 核心UI控制：智能显示与隐藏
+        saveSceneState(); // 初始化空场景
+
+        // UI 渲染
         const refreshOutliner = () => {
-            const outlinerPanel = document.getElementById('scene-outliner');
+            const outlinerPanel = document.getElementById('right-panel');
             if (partsList.length === 0) {
                 outlinerPanel.style.display = 'none';
                 return;
             } else {
                 outlinerPanel.style.display = 'flex';
+                window.dispatchEvent(new Event('resize')); // 重新调整画布
             }
 
             const container = document.getElementById('outliner-list');
             container.innerHTML = '';
-            document.getElementById('part-count').innerText = `${partsList.length} 个实体`;
             
             partsList.forEach(part => {
                 const div = document.createElement('div');
@@ -519,6 +562,23 @@
             tControls.setMode(mode);
             document.getElementById('t-translate').className = mode === 'translate' ? 'active' : '';
             document.getElementById('t-rotate').className = mode === 'rotate' ? 'active' : '';
+            document.getElementById('t-scale').className = mode === 'scale' ? 'active' : '';
+        };
+
+        // ★ 新增：一键复制实体
+        window.cloneSelectedPart = () => {
+            if(!selected3DPartId) return alert("请先选中要复制的实体！");
+            const part = partsList.find(p => p.id === selected3DPartId);
+            const newMesh = part.mesh.clone();
+            // 稍微偏移以免重叠看不见
+            newMesh.position.x += 50; newMesh.position.y += 50;
+            const newId = `Part_${++partCounter}`;
+            partsList.push({ id: newId, name: `${part.name}_副本`, mesh: newMesh });
+            scene.add(newMesh);
+            
+            refreshOutliner();
+            select3DPart(newId);
+            saveSceneState();
         };
 
         window.delete3DPart = () => {
@@ -532,17 +592,20 @@
 
         const getCheckedParts = () => partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked);
 
+        // ★ 核心重构：绝对安全的布尔熔断恢复
         window.execBoolean = (operation) => {
             const checked = getCheckedParts();
             if(checked.length !== 2) return alert("操作错误：请在列表中勾选【且仅勾选】 2 个实体进行布尔加工！");
             
             document.getElementById('loading').style.display = 'flex';
             setTimeout(() => {
+                // 记录执行前的安全历史索引
+                const safeHistoryIdx = historyIndex;
+                
                 try {
-                    saveSceneState();
                     const [partA, partB] = checked;
-                    
                     partA.mesh.updateMatrixWorld(true); partB.mesh.updateMatrixWorld(true);
+                    
                     const csgA = CSG.fromMesh(partA.mesh, partA.mesh.matrixWorld);
                     const csgB = CSG.fromMesh(partB.mesh, partB.mesh.matrixWorld);
                     
@@ -552,7 +615,7 @@
                     else if(operation === 'intersect') resultCSG = csgA.intersect(csgB);
                     
                     if (!resultCSG || resultCSG.polygons.length === 0) {
-                        throw new Error("模型重合导致零厚度崩溃或无接触。\n请稍微加长作为刀具的部件！");
+                        throw new Error("模型表面完全重合导致零厚度计算崩溃，或两者无接触！\n💡 提示：打孔时，请拉长刀具，确保彻底贯穿主体！");
                     }
                     
                     const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide });
@@ -561,22 +624,25 @@
                     const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 }));
                     newMesh.add(edge);
                     
+                    // 只有运算绝对成功，才删除原来的零件
                     scene.remove(partA.mesh); scene.remove(partB.mesh);
                     partsList.splice(partsList.indexOf(partA), 1); partsList.splice(partsList.indexOf(partB), 1);
                     tControls.detach();
                     document.getElementById('dimension-section').style.display = 'none';
                     
                     const newId = `Part_${++partCounter}`;
-                    partsList.push({ id: newId, name: `布尔组件_${newId}`, mesh: newMesh });
+                    partsList.push({ id: newId, name: `布尔件_${newId}`, mesh: newMesh });
                     scene.add(newMesh);
                     
                     refreshOutliner();
                     select3DPart(newId);
-                    saveSceneState(); 
+                    saveSceneState(); // 成功，写入新历史
+                    
                 } catch(e) {
                     console.error(e); 
-                    alert("布尔运算失败：\n" + (e.message || "拓扑结构冲突。"));
-                    sceneHistory.pop();
+                    // ★ 熔断恢复机制：强制加载刚才的安全历史，哪怕代码删掉了一半也能完美复原
+                    loadState(safeHistoryIdx);
+                    alert("布尔运算失败：\n" + (e.message || "拓扑结构冲突。") + "\n\n🛠 系统已自动拦截崩溃，并将模型完美恢复原状。");
                 } finally {
                     document.getElementById('loading').style.display = 'none';
                 }
@@ -699,10 +765,11 @@
 
         function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); }
         ani();
-        window.onresize = () => {
-            const w = document.getElementById('viewport').clientWidth, h = document.getElementById('viewport').clientHeight;
+        window.addEventListener('resize', () => {
+            const container = document.getElementById('center-viewport');
+            const w = container.clientWidth, h = container.clientHeight;
             camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
-        };
+        });
     </script>
 </body>
 </html>
