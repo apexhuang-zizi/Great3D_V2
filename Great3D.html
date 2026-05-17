@@ -126,6 +126,7 @@
                 <option value="intersect">三轴布尔交集 (需绘制三视图)</option>
                 <option value="extrude">平面单向拉伸 (仅激活视图)</option>
                 <option value="revolve">单轴中心旋转 (仅激活视图)</option>
+                <option value="sweep" style="color: #ff9900; font-weight: bold;">沿路径扫掠 (主视画截面, 侧视画路径)</option>
             </select>
             <div id="revolve-axis-container" style="display:none; justify-content:space-between; align-items:center; font-size:12px; color:#aaa; margin-top: 5px;">
                 <span>旋转轴:</span>
@@ -252,18 +253,33 @@
         </div>
 
         <div class="transform-tools">
+            <div style="font-size:11px; color:#aaa; margin-bottom:5px;">空间操作与编辑:</div>
             <div class="tool-row">
                 <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动句柄</button>
                 <button id="t-rotate" onclick="setTransformMode('rotate')">旋转球</button>
                 <button id="t-scale" onclick="setTransformMode('scale')">缩放控制</button>
             </div>
+            
+            <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:4px;">镜像克隆 (针对当前选中项):</div>
             <div class="tool-row">
-                <button onclick="cloneSelectedPart()">📄 复制</button>
-                <button onclick="advancedOpAlert('倒角 (Chamfer)')">📐 倒角</button>
-                <button onclick="advancedOpAlert('圆角 (Fillet)')">🟡 圆角</button>
-                <button onclick="advancedOpAlert('中空 (Shell)')">🔲 中空</button>
-                <button onclick="advancedOpAlert('表面雕刻 (Engrave)')">✒️ 雕刻</button>
-                <button style="background:#552222; border-color:#882222;" onclick="delete3DPart()">🗑 删除</button>
+                <button onclick="cloneSelectedPart()" title="原地复制一个相同的零件">📄 复制</button>
+                <button onclick="mirrorSelectedEntity('yz')">左右镜像(YZ)</button>
+                <button onclick="mirrorSelectedEntity('xz')">上下镜像(XZ)</button>
+                <button onclick="mirrorSelectedEntity('xy')">前后镜像(XY)</button>
+            </div>
+        
+            <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:4px;">多实体对齐 (列表中勾选多个, 依首项对齐):</div>
+            <div class="tool-row">
+                <button onclick="alignEntities('x', 'center')">X轴居中</button>
+                <button onclick="alignEntities('z', 'center')">Z轴居中</button>
+                <button onclick="alignEntities('y', 'top')">Y轴顶平齐</button>
+                <button onclick="alignEntities('y', 'bottom')">Y轴底平齐</button>
+            </div>
+        
+            <div class="tool-row" style="margin-top:12px;">
+                <button onclick="advancedOpAlert('倒角/圆角')">📐 倒/圆角</button>
+                <button onclick="advancedOpAlert('中空/雕刻')">🔲 中空/雕刻</button>
+                <button style="background:#552222; border-color:#882222;" onclick="delete3DPart()">🗑 删除选中</button>
             </div>
         </div>
 
@@ -373,7 +389,7 @@
             document.getElementById(`btn-del-${v}`).style.display = mode === 'select' ? 'inline-block' : 'none';
             renderCanvas(v);
         };
-
+        
         const renderCanvas = (v) => {
             const cv = document.getElementById(`cv-${v}`); const ctx = cv.getContext('2d');
             ctx.clearRect(0,0,CV_SIZE,CV_SIZE);
@@ -877,6 +893,60 @@
 
         const getCheckedParts = () => partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked);
 
+        // ================= 补丁 B-1：多实体精确对齐算法 =================
+        window.alignEntities = (axis, mode) => {
+            const checked = getCheckedParts();
+            if(checked.length < 2) return alert("对齐失败：请在右侧列表中勾选至少 2 个实体（排第一的为主体）！");
+            
+            const targetMaster = checked[0].mesh; // 第一个勾选的为主体基準
+            targetMaster.updateMatrixWorld(true);
+            const masterBox = new THREE.Box3().setFromObject(targetMaster);
+            const masterCenter = new THREE.Vector3(); masterBox.getCenter(masterCenter);
+            
+            // 遍历其余选中的工具体进行空间对齐移动
+            for(let i = 1; i < checked.length; i++) {
+                const toolMesh = checked[i].mesh;
+                toolMesh.updateMatrixWorld(true);
+                const toolBox = new THREE.Box3().setFromObject(toolMesh);
+                const toolCenter = new THREE.Vector3(); toolBox.getCenter(toolCenter);
+                
+                // 计算轴向位置差
+                if(axis === 'x' && mode === 'center') toolMesh.position.x += (masterCenter.x - toolCenter.x);
+                if(axis === 'z' && mode === 'center') toolMesh.position.z += (masterCenter.z - toolCenter.z);
+                if(axis === 'y' && mode === 'top')    toolMesh.position.y += (masterBox.max.y - toolBox.max.y);
+                if(axis === 'y' && mode === 'bottom') toolMesh.position.y += (masterBox.min.y - toolBox.min.y);
+            }
+            tControls.detach(); select3DPart(checked[0].id); // 刷新句柄
+            saveSceneState();
+        };
+        
+        // ================= 补丁 B-2：空间镜面镜像克隆算法 =================
+        window.mirrorSelectedEntity = (plane) => {
+            if(!selected3DPartId) return alert("请先在列表中点击选中需要镜像的母体零件！");
+            const part = partsList.find(p => p.id === selected3DPartId);
+            
+            // 克隆母体
+            const mirroredMesh = part.mesh.clone();
+            mirroredMesh.material = part.mesh.material.clone();
+            mirroredMesh.material.side = THREE.DoubleSide; // 强行启用双面，防止负缩放导致法线内翻隐形
+            
+            // 根据选定的镜面，对相应的轴向坐标和缩放尺寸进行取反变换
+            if(plane === 'yz') { mirroredMesh.scale.x *= -1; mirroredMesh.position.x *= -1; } // 关于左右镜像
+            if(plane === 'xz') { mirroredMesh.scale.y *= -1; mirroredMesh.position.y *= -1; } // 关于上下镜像
+            if(plane === 'xy') { mirroredMesh.scale.z *= -1; mirroredMesh.position.z *= -1; } // 关于前后镜像
+            
+            // 重新附加上边缘高亮线
+            const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mirroredMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+            mirroredMesh.add(edge);
+            
+            const newId = `Part_${++partCounter}`;
+            partsList.push({ id: newId, name: `${part.name}_镜像件`, mesh: mirroredMesh });
+            scene.add(mirroredMesh);
+            refreshOutliner();
+            select3DPart(newId);
+            saveSceneState();
+        };
+        
         // ================= ★ 微米级容差防崩的布尔引擎 (Auto-Epsilon Rescue) =================
         // ================= 补丁 4：烘焙级矩阵解耦防崩溃布尔引擎 =================
         window.execBoolean = (operation) => {
@@ -1063,6 +1133,35 @@
                         }
                         newMesh = new THREE.Mesh(new THREE.LatheGeometry(p3D, 64), mat);
                         newMesh.rotation.copy(rot);
+                    }
+                    else if (strategy === 'sweep') {
+                        // 规定：主视图 front 画截面，侧视图 side 画路径
+                        if(data.front.entities.length === 0 || data.side.currentPath.length === 0 && data.side.entities.length === 0) {
+                            throw new Error("扫掠造型失败：请在主视图绘制1个闭合截面，并在侧视图绘制手柄路径线！");
+                        }
+                        
+                        // 1. 提取主视图第一个闭合图元作为横截面 Shape
+                        const ent = data.front.entities[0];
+                        const shape = new THREE.Shape();
+                        if(ent.type === 'circle') shape.absarc(tCoord(ent.cx), tCoordY(ent.cy), ent.r, 0, Math.PI * 2, false);
+                        else if(ent.type === 'rect') {
+                            const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h;
+                            shape.moveTo(x-w/2, y-h/2); shape.lineTo(x+w/2, y-h/2); shape.lineTo(x+w/2, y+h/2); shape.lineTo(x-w/2, y+h/2); shape.closePath();
+                        }
+                        
+                        // 2. 提取侧视图的手绘折线/弧线作为 3D 轨迹路径
+                        const pathEntity = data.side.entities[0] || { pts: data.side.currentPath };
+                        const points3D = pathEntity.pts.map(p => {
+                            // 将侧视图 YZ 坐标投射到 3D 空间
+                            return new THREE.Vector3(0, tCoordY(p.cy), tCoord(p.cx)); 
+                        });
+                        
+                        const sweepPath = new THREE.CatmullRomCurve3(points3D);
+                        
+                        // 3. 执行扫掠放样挤出
+                        const sweepSettings = { steps: 100, bevelEnabled: false, extrudePath: sweepPath };
+                        const geometry = new THREE.ExtrudeGeometry(shape, sweepSettings);
+                        newMesh = new THREE.Mesh(geometry, mat);
                     }
 
                     const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
