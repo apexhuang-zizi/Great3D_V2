@@ -27,11 +27,11 @@
         canvas.mode-select { cursor: default; }
         .bg-img { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; object-fit: contain; opacity: 0.4; pointer-events: none; z-index: 1; }
         
-        .max-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: #ccc; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; z-index: 10; font-size: 16px; }
+        .max-btn { position: absolute; top: 15px; background: rgba(0,0,0,0.8); color: #ccc; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; z-index: 15; font-size: 14px; font-weight: bold; transition: 0.2s; }
         .max-btn:hover { background: #deff9a; color: #000; }
 
-        .top-floating-tools { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
-        .bottom-floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 10; }
+        .top-floating-tools { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 15; }
+        .bottom-floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 15; }
         
         .btn { background: #deff9a; color: #000; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
         .btn:hover { background: #c8f582; }
@@ -62,7 +62,7 @@
 
         #viewport { flex-grow: 1; width: 100%; height: 100%; }
 
-        /* 新增：3D 导航控制器 (ISO Cube) */
+        /* 3D 导航控制器 (ISO Cube) */
         #view-cube { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 8px; border: 1px solid #333; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #view-cube button { background: #222; color: #ccc; border: 1px solid #444; padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; font-weight: bold; }
         #view-cube button:hover { background: #deff9a; color: #000; }
@@ -87,7 +87,6 @@
         .dim-row { display: flex; justify-content: space-between; margin-top: 8px; }
         .dim-row span.val { color: #fff; font-weight: bold; font-size: 14px; }
 
-        /* 新增：参数化精确旋转面板 */
         #precision-transform { padding: 15px; background: #111; border-top: 1px solid #333; display: none; flex-direction: column; gap: 8px; }
         .tool-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
         
@@ -154,7 +153,15 @@
                         <input type="file" id="up-${v}" hidden onchange="loadImg(event, '${v}')">
                     </div>
                     <div class="canvas-container" id="container-${v}">
-                        <button class="max-btn" onclick="toggleMax('${v}')" title="全屏/退出全屏">⛶</button>
+                        
+                        <div id="zoom-wrap-${v}" style="position:absolute; top:0; left:0; width:100%; height:100%; transform-origin: 0 0; will-change: transform;">
+                            <img id="img-${v}" class="bg-img">
+                            <canvas id="cv-${v}" class="mode-select" width="1000" height="1000"></canvas>
+                        </div>
+                        
+                        <button class="max-btn" onclick="toggleMax('${v}')" title="全屏/退出全屏" style="right: 15px;">⛶</button>
+                        <button class="max-btn" onclick="resetCanvasZoom('${v}')" title="恢复 1:1 默认缩放" style="right: 60px;">1:1</button>
+
                         <div class="top-floating-tools">
                             <div class="mode-switch">
                                 <input type="radio" name="m-${v}" id="ms-${v}" value="select" checked onchange="setMode('${v}', 'select')"><label for="ms-${v}">↖ 选择</label>
@@ -170,8 +177,7 @@
                                 R: <input type="number" id="cr-${v}" value="150" oninput="updateEntityParam('${v}')">
                             </div>
                         </div>
-                        <img id="img-${v}" class="bg-img">
-                        <canvas id="cv-${v}" class="mode-select" width="1000" height="1000"></canvas>
+                        
                         <div class="bottom-floating-tools">
                             <button class="btn btn-sec" onclick="undoPath('${v}')" id="btn-undo-${v}" style="display:none">↶ 撤销描点</button>
                             <button class="btn btn-sec" onclick="closePath('${v}')" id="btn-close-${v}" style="display:none; color:#deff9a;">✓ 闭合为实体</button>
@@ -279,8 +285,25 @@
         import { STLExporter } from 'three/addons/exporters/STLExporter.js';
         import { CSG } from 'three-csg-ts';
 
-        // ================= UI 布局交互 =================
-        window.toggleMax = (v) => { document.getElementById(`container-${v}`).classList.toggle('fullscreen'); };
+        // ================= UI 布局交互 (智能防冲突隐藏) =================
+        window.toggleMax = (v) => { 
+            const container = document.getElementById(`container-${v}`);
+            const isFull = container.classList.toggle('fullscreen'); 
+            
+            // 全屏时智能隐藏所有可能遮挡画布的浮窗
+            document.getElementById('viewport-hints').style.display = isFull ? 'none' : 'block';
+            document.getElementById('view-cube').style.display = isFull ? 'none' : 'flex';
+            
+            if(isFull) {
+                window._prevRightPanelDisplay = document.getElementById('right-panel').style.display;
+                document.getElementById('right-panel').style.display = 'none';
+            } else {
+                document.getElementById('right-panel').style.display = window._prevRightPanelDisplay || 'none';
+            }
+            // 延迟触发 resize 修正可能错位的 3D 画布
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        };
+
         window.toggleLeftPanel = () => {
             const lp = document.getElementById('left-panel');
             const btn = document.getElementById('toggle-panel-btn');
@@ -295,16 +318,16 @@
         };
 
         window.advancedOpAlert = (name) => {
-            alert(`【${name}】功能接口已就绪。\n\n由于浏览器本地 WebGL 性能限制，复杂拓扑计算（如倒角/中空/表面雕刻）后续将通过云端引擎渲染。敬请期待下个版本更新！\n\n💡 临时方案：如果需要中空或倒角，建议直接在左侧 2D 草图中精确绘制截面，然后进行拉伸生成。`);
+            alert(`【${name}】功能接口已就绪。\n\n由于浏览器 WebGL 本地计算性能限制，复杂拓扑级特征（如倒角/雕刻）将接入云端网格引擎计算。敬请期待下一次更新！\n\n💡 替代方案：可在 2D 草图中直接绘制带圆角、中空的精确截面截面，然后进行空间拉伸。`);
         };
 
-        // ================= 2D 画布引擎 (最完善手绘+弧线) =================
+        // ================= 2D 画布引擎 (Pan/Zoom 与 连续路径防清空) =================
         const views = ['front', 'top', 'side'];
         const CV_SIZE = 1000; 
         const data = { 
-            front: { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null }, 
-            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null }, 
-            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null } 
+            front: { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }, 
+            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }, 
+            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 } 
         };
         let entityIdCounter = 0;
 
@@ -315,16 +338,32 @@
         };
         window.toggleRevolveOptions = () => { document.getElementById('revolve-axis-container').style.display = document.getElementById('gen-strategy').value === 'revolve' ? 'flex' : 'none'; };
 
+        window.resetCanvasZoom = (v) => {
+            data[v].panX = 0; data[v].panY = 0; data[v].zoom = 1;
+            document.getElementById(`zoom-wrap-${v}`).style.transform = `translate(0px, 0px) scale(1)`;
+        };
+
         window.setMode = (v, mode) => { 
-            data[v].mode = mode; data[v].selectedId = null; data[v].currentPath = []; data[v].arcState = 0;
+            const wasDrawing = (data[v].mode === 'line' || data[v].mode === 'arc');
+            const isDrawing = (mode === 'line' || mode === 'arc');
+            
+            data[v].mode = mode; 
+            data[v].selectedId = null; 
+            
+            // 核心修复：在画多边形时，任意切换“线段”与“弧线”，绝对不清除之前的进度！
+            if (!(wasDrawing && isDrawing)) {
+                data[v].currentPath = []; 
+                data[v].arcState = 0; 
+                data[v].tempArcEnd = null;
+            }
+
             const cv = document.getElementById(`cv-${v}`); cv.className = mode === 'select' ? 'mode-select' : '';
             
             document.getElementById(`p-rect-${v}`).style.display = mode === 'rect' ? 'flex' : 'none';
             document.getElementById(`p-circle-${v}`).style.display = mode === 'circle' ? 'flex' : 'none';
             
-            const isDraw = mode === 'line' || mode === 'arc';
-            document.getElementById(`btn-undo-${v}`).style.display = isDraw ? 'inline-block' : 'none';
-            document.getElementById(`btn-close-${v}`).style.display = isDraw ? 'inline-block' : 'none';
+            document.getElementById(`btn-undo-${v}`).style.display = isDrawing ? 'inline-block' : 'none';
+            document.getElementById(`btn-close-${v}`).style.display = isDrawing ? 'inline-block' : 'none';
             document.getElementById(`btn-del-${v}`).style.display = mode === 'select' ? 'inline-block' : 'none';
             renderCanvas(v);
         };
@@ -390,62 +429,138 @@
             return null;
         };
 
+        // 获取经过缩放矩阵还原后的鼠标实际坐标
         const getCanvasCoords = (v, e) => {
-            const cv = document.getElementById(`cv-${v}`); const r = cv.getBoundingClientRect(); const scale = r.width / CV_SIZE; 
+            const cv = document.getElementById(`cv-${v}`); 
+            // getBoundingClientRect 能够自动包含 CSS 缩放产生的大小变化
+            const r = cv.getBoundingClientRect(); 
+            const scale = r.width / CV_SIZE; 
             return { cx: (e.clientX - r.left) / scale, cy: (e.clientY - r.top) / scale };
         };
 
+        // 全局平移状态
+        let activePanView = null;
+        let startPanX = 0, startPanY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            if (activePanView) {
+                const v = activePanView;
+                data[v].panX = e.clientX - startPanX;
+                data[v].panY = e.clientY - startPanY;
+                document.getElementById(`zoom-wrap-${v}`).style.transform = `translate(${data[v].panX}px, ${data[v].panY}px) scale(${data[v].zoom})`;
+            }
+        });
+        window.addEventListener('mouseup', () => {
+            if(activePanView) { document.getElementById(`container-${activePanView}`).style.cursor = 'default'; activePanView = null; }
+        });
+
         views.forEach(v => {
+            const container = document.getElementById(`container-${v}`);
+            const wrap = document.getElementById(`zoom-wrap-${v}`);
             const cv = document.getElementById(`cv-${v}`);
             let dragState = null;
 
+            // --- 滚轮无极缩放 (聚焦鼠标位置缩放) ---
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomAmount = e.deltaY > 0 ? 0.9 : 1.1;
+                const rect = container.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                data[v].panX = mx - (mx - data[v].panX) * zoomAmount;
+                data[v].panY = my - (my - data[v].panY) * zoomAmount;
+                data[v].zoom *= zoomAmount;
+                
+                // 限制缩放比例
+                if(data[v].zoom < 0.2) data[v].zoom = 0.2;
+                if(data[v].zoom > 10) data[v].zoom = 10;
+                
+                wrap.style.transform = `translate(${data[v].panX}px, ${data[v].panY}px) scale(${data[v].zoom})`;
+            });
+
+            // 屏蔽外层系统右键菜单 (为了右键平移和输入尺寸)
+            container.addEventListener('contextmenu', e => e.preventDefault());
+
             cv.addEventListener('keydown', (e) => { if ((e.key === 'Delete' || e.key === 'Backspace') && data[v].selectedId !== null) window.deleteSelected(v); });
 
-            cv.addEventListener('mousedown', (e) => {
-                cv.focus(); if(e.button !== 0) return;
+            // --- 画布鼠标按下 (区分绘制、拖拽和平移) ---
+            container.addEventListener('mousedown', (e) => {
+                // 中键，或者非线段模式下的右键 -> 触发画布平移
+                if (e.button === 1 || (e.button === 2 && data[v].mode !== 'line' && data[v].mode !== 'arc')) {
+                    e.preventDefault();
+                    activePanView = v;
+                    startPanX = e.clientX - data[v].panX;
+                    startPanY = e.clientY - data[v].panY;
+                    container.style.cursor = 'grabbing';
+                    return;
+                }
+                
+                // 如果不是左键且不是右键(绘图菜单)，退出
+                if(e.button !== 0 && e.button !== 2) return;
+                
+                // 如果按在浮动工具上，退出
+                if(e.target !== cv) return;
+
+                cv.focus();
                 let { cx, cy } = getCanvasCoords(v, e);
                 
-                if (data[v].mode === 'select') {
-                    const hitId = hitTest(v, cx, cy); data[v].selectedId = hitId;
-                    if (hitId !== null) {
-                        const ent = data[v].entities.find(e => e.id === hitId);
-                        dragState = { ent, startX: cx, startY: cy, origCx: ent.cx, origCy: ent.cy };
-                        if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; } 
-                        else if(ent.type === 'circle') { document.getElementById(`p-circle-${v}`).style.display = 'flex'; document.getElementById(`cr-${v}`).value = ent.r; }
-                    } else { document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; }
-                    renderCanvas(v);
-                } 
-                else {
-                    // 正交吸附
-                    if((data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) && data[v].currentPath.length > 0) {
-                        const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                        if (Math.abs(cx - lastP.cx) < 20) cx = lastP.cx; else if (Math.abs(cy - lastP.cy) < 20) cy = lastP.cy;
-                    }
-                    
-                    if(data[v].mode === 'rect') {
-                        const w = parseFloat(document.getElementById(`rw-${v}`).value) || 100; const h = parseFloat(document.getElementById(`rh-${v}`).value) || 100;
-                        data[v].entities.push({ id: ++entityIdCounter, type: 'rect', cx, cy, w, h });
-                    } else if(data[v].mode === 'circle') {
-                        const r = parseFloat(document.getElementById(`cr-${v}`).value) || 50;
-                        data[v].entities.push({ id: ++entityIdCounter, type: 'circle', cx, cy, r });
-                    } else {
-                        // 线条与弧线绘制逻辑
-                        if(data[v].currentPath.length === 0) {
-                            data[v].currentPath.push({ type: 'start', cx, cy });
+                if (e.button === 0) { // 左键逻辑
+                    if (data[v].mode === 'select') {
+                        const hitId = hitTest(v, cx, cy); data[v].selectedId = hitId;
+                        if (hitId !== null) {
+                            const ent = data[v].entities.find(en => en.id === hitId);
+                            dragState = { ent, startX: cx, startY: cy, origCx: ent.cx, origCy: ent.cy };
+                            if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; } 
+                            else if(ent.type === 'circle') { document.getElementById(`p-circle-${v}`).style.display = 'flex'; document.getElementById(`cr-${v}`).value = ent.r; }
+                        } else { document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; }
+                        renderCanvas(v);
+                    } 
+                    else {
+                        // 正交吸附容差放大
+                        if((data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) && data[v].currentPath.length > 0) {
+                            const lastP = data[v].currentPath[data[v].currentPath.length - 1];
+                            if (Math.abs(cx - lastP.cx) < 25 / data[v].zoom) cx = lastP.cx; 
+                            else if (Math.abs(cy - lastP.cy) < 25 / data[v].zoom) cy = lastP.cy;
+                        }
+                        
+                        if(data[v].mode === 'rect') {
+                            const w = parseFloat(document.getElementById(`rw-${v}`).value) || 100; const h = parseFloat(document.getElementById(`rh-${v}`).value) || 100;
+                            data[v].entities.push({ id: ++entityIdCounter, type: 'rect', cx, cy, w, h });
+                        } else if(data[v].mode === 'circle') {
+                            const r = parseFloat(document.getElementById(`cr-${v}`).value) || 50;
+                            data[v].entities.push({ id: ++entityIdCounter, type: 'circle', cx, cy, r });
                         } else {
-                            if (data[v].mode === 'line') {
-                                data[v].currentPath.push({ type: 'line', cx, cy });
-                            } else if (data[v].mode === 'arc') {
-                                if (data[v].arcState === 0) {
-                                    data[v].tempArcEnd = { cx, cy }; data[v].arcState = 1;
-                                } else {
-                                    data[v].currentPath.push({ type: 'arc', cx: data[v].tempArcEnd.cx, cy: data[v].tempArcEnd.cy, cpx: cx, cpy: cy });
-                                    data[v].arcState = 0; data[v].tempArcEnd = null;
+                            if(data[v].currentPath.length === 0) {
+                                data[v].currentPath.push({ type: 'start', cx, cy });
+                            } else {
+                                if (data[v].mode === 'line') {
+                                    data[v].currentPath.push({ type: 'line', cx, cy });
+                                } else if (data[v].mode === 'arc') {
+                                    if (data[v].arcState === 0) {
+                                        data[v].tempArcEnd = { cx, cy }; data[v].arcState = 1;
+                                    } else {
+                                        data[v].currentPath.push({ type: 'arc', cx: data[v].tempArcEnd.cx, cy: data[v].tempArcEnd.cy, cpx: cx, cpy: cy });
+                                        data[v].arcState = 0; data[v].tempArcEnd = null;
+                                    }
                                 }
                             }
                         }
+                        renderCanvas(v);
                     }
-                    renderCanvas(v);
+                } 
+                else if (e.button === 2) { // 右键绘制直线精确长度
+                    if(data[v].mode !== 'line' || data[v].currentPath.length === 0) return;
+                    const lastP = data[v].currentPath[data[v].currentPath.length - 1];
+                    
+                    if (Math.abs(cx - lastP.cx) < 30 / data[v].zoom) cx = lastP.cx;
+                    else if (Math.abs(cy - lastP.cy) < 30 / data[v].zoom) cy = lastP.cy;
+                    
+                    let dx = cx - lastP.cx, dy = cy - lastP.cy; const len = Math.sqrt(dx*dx + dy*dy); if(len === 0) return;
+                    dx /= len; dy /= len; 
+                    
+                    const distStr = prompt("输入沿此方向的精确长度 (mm):", "50");
+                    if(distStr && !isNaN(parseFloat(distStr))) { data[v].currentPath.push({ type: 'line', cx: lastP.cx + dx * parseFloat(distStr), cy: lastP.cy + dy * parseFloat(distStr) }); renderCanvas(v); }
                 }
             });
 
@@ -459,24 +574,6 @@
             });
             cv.addEventListener('mouseup', () => { dragState = null; });
             
-            // 右键精确输入长度
-            cv.addEventListener('contextmenu', (e) => {
-                e.preventDefault(); 
-                if(data[v].mode !== 'line' || data[v].currentPath.length === 0) return;
-                const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                let { cx, cy } = getCanvasCoords(v, e);
-                
-                // 正交吸附修正
-                if (Math.abs(cx - lastP.cx) < 30) cx = lastP.cx;
-                else if (Math.abs(cy - lastP.cy) < 30) cy = lastP.cy;
-                
-                let dx = cx - lastP.cx, dy = cy - lastP.cy; const len = Math.sqrt(dx*dx + dy*dy); if(len === 0) return;
-                dx /= len; dy /= len; 
-                
-                const distStr = prompt("输入沿此方向的精确长度 (mm):", "50");
-                if(distStr && !isNaN(parseFloat(distStr))) { data[v].currentPath.push({ type: 'line', cx: lastP.cx + dx * parseFloat(distStr), cy: lastP.cy + dy * parseFloat(distStr) }); renderCanvas(v); }
-            });
-
             window.undoPath = (vv) => { 
                 if(data[vv].currentPath.length > 0) { 
                     if(data[vv].arcState === 1) { data[vv].arcState = 0; data[vv].tempArcEnd = null; } 
@@ -485,12 +582,11 @@
                 } 
             };
             
-            // 闭合手绘多边形
             window.closePath = (vv) => { 
                 if(data[vv].currentPath.length > 2) { 
                     let sumX=0, sumY=0; data[vv].currentPath.forEach(p=>{sumX+=p.cx; sumY+=p.cy;});
                     data[vv].entities.push({ id: ++entityIdCounter, type: 'path', cx: sumX/data[vv].currentPath.length, cy: sumY/data[vv].currentPath.length, pts: [...data[vv].currentPath] });
-                    data[vv].currentPath = []; document.getElementById(`ms-${vv}`).click(); // 切回选择工具
+                    data[vv].currentPath = []; document.getElementById(`ms-${vv}`).click(); 
                 } 
             };
             
@@ -605,7 +701,10 @@
         const refreshOutliner = () => {
             const outlinerPanel = document.getElementById('right-panel');
             if (partsList.length === 0) { outlinerPanel.style.display = 'none'; return; } 
-            else { outlinerPanel.style.display = 'flex'; window.dispatchEvent(new Event('resize')); }
+            else { 
+                outlinerPanel.style.display = 'flex'; 
+                if(!document.getElementById('left-panel').classList.contains('collapsed')) window.dispatchEvent(new Event('resize')); 
+            }
 
             const container = document.getElementById('outliner-list');
             container.innerHTML = '';
@@ -749,7 +848,7 @@
                         
                         if(operation === 'union') throw new Error("求和失败，模型可能没有任何接触。");
 
-                        // 拷贝一个刀具，并将其微移 0.001 毫米，打破几何学上的共面死锁
+                        // 拷贝一个刀具，并将其微移 0.001 毫米，打破几何学上的完美共面死锁
                         const rescueTool = checked[1].mesh.clone();
                         rescueTool.position.x += 0.001; 
                         rescueTool.position.y += 0.001; 
@@ -818,7 +917,6 @@
                         if(ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
                         else s.lineTo(tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
                     }
-                    // ★ 强制闭合几何体
                     s.closePath();
                 }
                 const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(s, extSet).translate(0,0,-depth/2));
