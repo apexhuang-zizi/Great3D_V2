@@ -2,1356 +2,519 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>APEX CAD ENGINE - PRO 满血参数版</title>
+    <title>APEX CAD ENGINE - 工业级满血全量版</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; flex-direction: row; }
-        
-        /* === 左侧 2D 绘图面板 === */
-        #left-panel { flex: 0 0 480px; width: 480px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        #left-panel { flex: 0 0 480px; width: 480px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; transition: margin-left 0.3s; }
         #left-panel.collapsed { margin-left: -480px; }
-        
         .panel-header { padding: 20px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .top-settings { padding: 15px 20px; background: #0a0a0a; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        .top-settings select { background: #222; color: #deff9a; border: 1px solid #444; padding: 6px; border-radius: 4px; outline: none; width: 100%; font-weight: bold; }
-        
-        .tabs { display: flex; background: #222; border-bottom: 1px solid #333; }
-        .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-size: 13px; color: #666; transition: 0.2s; }
-        .tab.active { color: #deff9a; background: #1a1a1a; border-bottom: 2px solid #deff9a; }
-        .tab-content { display: none; padding: 15px 20px; flex-grow: 1; overflow-y: auto; }
-        .tab-content.active { display: flex; flex-direction: column; }
-        
-        .canvas-container { width: 100%; aspect-ratio: 1/1; background: #000; border: 1px solid #333; position: relative; margin: 10px 0; display: flex; justify-content: center; align-items: center; border-radius: 8px; transition: all 0.3s; overflow: hidden; }
-        .canvas-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; border-radius: 0; border: none; margin: 0; background: #0a0a0a; }
-        
-        canvas { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; z-index: 2; cursor: crosshair; }
-        canvas.mode-select { cursor: default; }
-        .bg-img { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; object-fit: contain; opacity: 0.4; pointer-events: none; z-index: 1; }
-        
-        .max-btn { position: absolute; top: 15px; background: rgba(0,0,0,0.8); color: #ccc; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; z-index: 15; font-size: 14px; font-weight: bold; transition: 0.2s; }
-        .max-btn:hover { background: #deff9a; color: #000; }
-
-        .top-floating-tools { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 15; }
-        .bottom-floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 15; }
-        
-        .btn { background: #deff9a; color: #000; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
-        .btn:hover { background: #c8f582; }
-        .btn-sec { background: #333; color: #ccc; }
-        .btn-sec:hover { background: #444; color: #fff; }
-        
-        .mode-switch { display: flex; background: rgba(0,0,0,0.9); border-radius: 6px; overflow: hidden; border: 1px solid #444; width: fit-content; }
-        .mode-switch label { padding: 8px 12px; cursor: pointer; font-size: 12px; color: #aaa; border-right: 1px solid #444; }
-        .mode-switch label:last-child { border-right: none; }
-        .mode-switch input[type="radio"] { display: none; }
-        .mode-switch input[type="radio"]:checked + label { background: #deff9a; color: #000; font-weight: bold; }
-        
-        .param-box { background: rgba(0,0,0,0.9); padding: 8px 12px; border: 1px solid #444; border-radius: 6px; display: flex; gap: 8px; align-items: center; font-size: 12px; color: #ccc; }
-        .param-box input { width: 45px; background: #222; color: #deff9a; border: 1px solid #555; text-align: center; border-radius: 4px; padding: 4px; outline:none; }
-        
-        .action-bar { padding: 20px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
-        .depth-input { background:#000; color:#deff9a; border:1px solid #444; padding:6px; border-radius: 4px; outline: none; }
-        
-        /* === 中间 3D 视窗 === */
-        #center-viewport { flex: 1 1 auto; position: relative; background: #0d0d0d; display: flex; flex-direction: column; }
-        #loading { position: absolute; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; font-weight:bold; color: #deff9a; font-size: 20px; }
-        
-        #toggle-panel-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); background: #222; color: #deff9a; border: 1px solid #444; border-left: none; padding: 20px 5px; cursor: pointer; z-index: 1000; border-radius: 0 8px 8px 0; font-size: 12px; text-align: center; box-shadow: 2px 0 10px rgba(0,0,0,0.5); transition: 0.2s; }
-        #toggle-panel-btn:hover { background: #444; color: #fff; }
-
-        #viewport-hints { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #333; border-radius: 20px; padding: 8px 20px; color: #888; font-size: 12px; z-index: 10; pointer-events: none; }
-        #viewport-hints span { color: #deff9a; font-weight: bold; margin: 0 5px; }
-
-        #viewport { flex-grow: 1; width: 100%; height: 100%; }
-
-        /* 3D 导航控制器 (ISO Cube) */
-        #view-cube { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 8px; border: 1px solid #333; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        #view-cube button { background: #222; color: #ccc; border: 1px solid #444; padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; font-weight: bold; }
-        #view-cube button:hover { background: #deff9a; color: #000; }
-
-        /* === 右侧固定装配控制面板 === */
-        #right-panel { flex: 0 0 340px; width: 340px; background: #151515; border-left: 1px solid #333; display: none; flex-direction: column; z-index: 20; box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
-        
-        .outliner-header { padding: 15px; background: #222; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
-        .outliner-header .title { font-weight: bold; font-size: 14px; color: #deff9a; }
-        .history-btns button { background: #444; border: 1px solid #555; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 14px; cursor: pointer; transition: 0.2s; }
-        .history-btns button:hover:not(:disabled) { background: #deff9a; color: #000; }
-        .history-btns button:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        .outliner-list { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #111; }
-        .outliner-item { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 10px 12px; border-radius: 6px; border: 1px solid #333; font-size: 13px; cursor: pointer; transition: 0.2s; }
-        .outliner-item:hover { border-color: #555; }
-        .outliner-item.active { border-color: #deff9a; background: rgba(222,255,154,0.1); }
-        .outliner-item input[type="checkbox"] { margin-right: 12px; cursor: pointer; width: 16px; height: 16px; }
-        .item-name { flex-grow: 1; font-weight: bold; }
-
-        #dimension-section { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; font-family: monospace; color: #deff9a; font-size: 13px; display: none; flex-direction: column; }
-        .dim-row { display: flex; justify-content: space-between; margin-top: 8px; }
-        .dim-row span.val { color: #fff; font-weight: bold; font-size: 14px; }
-
-        #precision-transform { padding: 15px; background: #111; border-top: 1px solid #333; display: none; flex-direction: column; gap: 8px; }
-        .tool-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
-        
-        .transform-tools { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        .transform-tools button { flex: 1; padding: 10px 5px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; white-space: nowrap; }
-        .transform-tools button.active { background: #deff9a; color: #000; font-weight: bold; }
-        .transform-tools button:hover:not(.active) { background: #444; }
-        
-        .boolean-tools { padding: 15px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        .boolean-row { display: flex; gap: 8px; }
-        .boolean-row button { flex: 1; padding: 12px 5px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
-        .boolean-row button:hover { background: #555; }
-        .boolean-row button.b-union { border-left: 3px solid #4CAF50; }
-        .boolean-row button.b-sub { border-left: 3px solid #F44336; }
-        .boolean-row button.b-int { border-left: 3px solid #2196F3; }
+        .top-settings select { background: #222; color: #deff9a; border: 1px solid #444; padding: 8px; border-radius: 4px; outline: none; width: 100%; font-weight: bold; }
+        .tabs-header { display: flex; background: #050505; border-bottom: 1px solid #333; }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #888; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #deff9a; border-bottom: 2px solid #deff9a; background: #1a1a1a; }
+        .tab-content { display: none; flex-grow: 1; position: relative; overflow: hidden; background: #151515; }
+        .tab-content.active { display: block; }
+        .canvas-container { position: relative; width: 100%; height: 100%; cursor: crosshair; }
+        .bg-img { position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.4; transform-origin: 0 0; }
+        .draw-cv { position: absolute; top: 0; left: 0; background: transparent; width: 100%; height: 100%; }
+        .top-floating-tools { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; flex-direction: column; gap: 6px; z-index: 50; }
+        .tool-row { display: flex; gap: 6px; align-items: center; width: 100%; flex-wrap: wrap; }
+        .mode-switch { display: flex; background: rgba(10,10,10,0.85); border: 1px solid #444; padding: 4px; border-radius: 6px; backdrop-filter: blur(8px); }
+        .mode-switch input { display: none; }
+        .mode-switch label { padding: 6px 12px; font-size: 11px; font-weight: bold; color: #aaa; cursor: pointer; border-radius: 4px; }
+        .mode-switch input:checked + label { background: #deff9a; color: #111; }
+        .param-box { background: rgba(10,10,10,0.85); border: 1px solid #444; padding: 4px 8px; border-radius: 6px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #ccc; }
+        .param-box input { width: 45px; background: #252525; border: 1px solid #555; color: #deff9a; padding: 4px; border-radius: 4px; text-align: center; outline: none; }
+        .bottom-actions { padding: 15px 20px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+        .btn { background: #deff9a; color: #111; font-weight: bold; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn:hover { background: #fff; }
+        .btn-sec { background: #2a2a2a; color: #ccc; border: 1px solid #444; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-sec:hover, .btn-sec.active { background: #deff9a; color: #000; }
+        #center-viewport { flex-grow: 1; height: 100vh; background: #16161a; position: relative; }
+        #toggle-panel-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); background: #222; border: 1px solid #444; border-left: none; color: #deff9a; width: 16px; height: 60px; line-height: 60px; text-align: center; cursor: pointer; z-index: 100; font-size: 12px; border-radius: 0 6px 6px 0; }
+        #view-cube { position: absolute; top: 20px; right: 20px; background: rgba(20,20,20,0.7); border: 1px solid #444; display: flex; gap: 4px; padding: 4px; border-radius: 6px; z-index: 50; }
+        .cube-face { background: #2a2a2a; border: 1px solid #555; color: #aaa; font-size: 10px; padding: 6px 10px; cursor: pointer; border-radius: 4px; }
+        #viewport-hints { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 4px; font-size: 11px; color: #aaa; pointer-events: none; }
+        #right-panel { flex: 0 0 320px; width: 320px; background: #1a1a1a; border-left: 1px solid #333; display: flex; flex-direction: column; z-index: 10; }
+        .outliner-header { padding: 15px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .outliner-list { display: flex; flex-direction: column; gap: 4px; padding: 5px 10px; max-height: 200px; overflow-y: auto; }
+        .outliner-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #222; border: 1px solid #333; border-radius: 4px; cursor: pointer; transition: 0.15s; user-select: none; }
+        .outliner-item.active { background: rgba(0,170,255,0.15); border-color: #00aaff; }
+        .dim-row { display: flex; justify-content: space-between; width: 100%; color: #aaa; font-size: 11px; }
+        .dim-row .val { color: #deff9a; font-family: monospace; font-weight: bold; }
+        .boolean-row { display: flex; gap: 6px; width: 100%; }
+        .boolean-row button { flex: 1; padding: 10px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; color: #fff; background: #333;}
+        #loading { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; display: none; justify-content: center; align-items: center; flex-direction: column; color: #deff9a; font-weight: bold;}
+        .spinner { width: 40px; height: 40px; border: 4px solid #222; border-top-color: #deff9a; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        details summary { outline: none; user-select: none; padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; }
     </style>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://esm.sh/three@0.160.0",
-                "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
-                "three-csg-ts": "https://esm.sh/three-csg-ts@3.1.11?external=three"
-            }
-        }
-    </script>
+    <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.147.0/examples/js/controls/TransformControls.js"></script>
+    <script src="https://unpkg.com/three-csg-ts@3.1.10/dist/bundle.umd.js"></script>
 </head>
 <body>
+    <div id="loading"><div class="spinner"></div><div id="loading-text">多线程布尔拓扑计算中...</div></div>
+
     <div id="left-panel">
         <div class="panel-header">
-            <h3 style="margin:0; font-size:16px; color:#deff9a">APEX CAD 2D草图</h3>
-            <a href="index.html" style="color:#666; text-decoration:none; font-size:12px">← BACK</a>
+            <span style="font-weight: bold; font-size: 15px;">APEX CAD ENGINE</span>
+            <span style="font-size: 10px; background: #252525; padding: 4px 8px; border-radius: 4px;">V3.0 FULL</span>
         </div>
-        
         <div class="top-settings">
-            <div style="font-size:12px; color:#aaa; margin-bottom: 5px;"><i style="color:#deff9a">●</i> 1. 选择空间生成策略:</div>
             <select id="gen-strategy" onchange="toggleRevolveOptions()">
                 <option value="intersect">三轴布尔交集 (需绘制三视图)</option>
                 <option value="extrude">平面单向拉伸 (仅激活视图)</option>
                 <option value="revolve">单轴中心旋转 (仅激活视图)</option>
-                <option value="sweep" style="color: #ff9900; font-weight: bold;">沿路径扫掠 (主视画截面, 侧视画路径)</option>
+                <option value="sweep" style="color: #ff9900;">沿路径扫掠 (主视画截面, 侧视画路径)</option>
             </select>
-            <div id="revolve-axis-container" style="display:none; justify-content:space-between; align-items:center; font-size:12px; color:#aaa; margin-top: 5px;">
-                <span>旋转轴:</span>
-                <div class="mode-switch">
-                    <input type="radio" name="r-axis" id="ra-x" value="X"><label for="ra-x">X 轴</label>
-                    <input type="radio" name="r-axis" id="ra-y" value="Y" checked><label for="ra-y">Y 轴</label>
-                    <input type="radio" name="r-axis" id="ra-z" value="Z"><label for="ra-z">Z 轴</label>
-                </div>
+            <div id="revolve-axis-box" style="display: none; align-items: center; gap: 15px; background: #000; padding: 10px; border-radius: 6px;">
+                <span style="font-size: 11px; color: #aaa;">轴向:</span>
+                <label><input type="radio" name="r-axis" value="X" checked> X 轴</label>
+                <label><input type="radio" name="r-axis" value="Y"> Y 轴</label>
+                <label><input type="radio" name="r-axis" value="Z"> Z 轴</label>
             </div>
-        </div>
-
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('front')">主视 (XY)</div>
-            <div class="tab" onclick="switchTab('top')">俯视 (XZ)</div>
-            <div class="tab" onclick="switchTab('side')">侧视 (YZ)</div>
         </div>
         
-        <script>
-            const views = ['front', 'top', 'side'];
-            views.forEach((v, i) => {
-                document.write(`
-                <div id="tab-${v}" class="tab-content ${i===0?'active':''}">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                        <button class="btn btn-sec" onclick="document.getElementById('up-${v}').click()">📁 导入底图</button>
-                        <input type="file" id="up-${v}" hidden onchange="loadImg(event, '${v}')">
-                    </div>
-                    <div class="canvas-container" id="container-${v}">
-                        
-                        <div id="zoom-wrap-${v}" style="position:absolute; top:0; left:0; width:100%; height:100%; transform-origin: 0 0; will-change: transform;">
-                            <img id="img-${v}" class="bg-img">
-                            <canvas id="cv-${v}" class="mode-select" width="1000" height="1000"></canvas>
-                        </div>
-                        
-                        <button class="max-btn" onclick="toggleMax('${v}')" title="全屏/退出全屏" style="right: 15px;">⛶</button>
-                        <button class="max-btn" onclick="resetCanvasZoom('${v}')" title="恢复 1:1 默认缩放" style="right: 60px;">1:1</button>
-
-                        <div class="top-floating-tools">
-                            <div class="mode-switch">
-                                <input type="radio" name="m-${v}" id="ms-${v}" value="select" checked onchange="setMode('${v}', 'select')"><label for="ms-${v}">↖ 选择</label>
-                                <input type="radio" name="m-${v}" id="ml-${v}" value="line" onchange="setMode('${v}', 'line')"><label for="ml-${v}">线段</label>
-                                <input type="radio" name="m-${v}" id="ma-${v}" value="arc" onchange="setMode('${v}', 'arc')"><label for="ma-${v}">弧线</label>
-                                <input type="radio" name="m-${v}" id="mr-${v}" value="rect" onchange="setMode('${v}', 'rect')"><label for="mr-${v}">方形</label>
-                                <input type="radio" name="m-${v}" id="mc-${v}" value="circle" onchange="setMode('${v}', 'circle')"><label for="mc-${v}">圆形</label>
+        <div class="tabs-header">
+            <button class="tab-btn active" onclick="switchTab('front')">主视图 (Front)</button>
+            <button class="tab-btn" onclick="switchTab('top')">俯视图 (Top)</button>
+            <button class="tab-btn" onclick="switchTab('side')">侧视图 (Side)</button>
+        </div>
+        
+        <div style="flex-grow: 1; position: relative;" id="canvas-viewports-wrapper">
+            <script>
+                const views = ['front', 'top', 'side'];
+                views.forEach((v, i) => {
+                    document.write(`
+                        <div id="tab-${v}" class="tab-content ${i===0?'active':''}">
+                            <div class="top-floating-tools">
+                                <div class="tool-row">
+                                    <div class="mode-switch">
+                                        <input type="radio" name="m-${v}" id="ms-${v}" value="select" checked onchange="setMode('${v}', 'select')"><label for="ms-${v}">↖ 选择</label>
+                                        <input type="radio" name="m-${v}" id="ml-${v}" value="line" onchange="setMode('${v}', 'line')"><label for="ml-${v}">线段</label>
+                                        <input type="radio" name="m-${v}" id="ma-${v}" value="arc" onchange="setMode('${v}', 'arc')"><label for="ma-${v}">弧线</label>
+                                        <input type="radio" name="m-${v}" id="mr-${v}" value="rect" onchange="setMode('${v}', 'rect')"><label for="mr-${v}">方形</label>
+                                        <input type="radio" name="m-${v}" id="mc-${v}" value="circle" onchange="setMode('${v}', 'circle')"><label for="mc-${v}">圆形</label>
+                                        <input type="radio" name="m-${v}" id="me-${v}" value="eraser" onchange="setMode('${v}', 'eraser')"><label for="me-${v}" style="color:#ffcc00">🧽 擦除</label>
+                                    </div>
+                                    <button class="btn-sec" onclick="toggleMax('${v}')">🔳</button>
+                                </div>
+                                <div class="tool-row">
+                                    <div id="p-rect-${v}" class="param-box" style="display:none">W: <input type="number" id="rw-${v}" value="300" oninput="updateEntityParam('${v}')"> H: <input type="number" id="rh-${v}" value="200" oninput="updateEntityParam('${v}')"></div>
+                                    <div id="p-circle-${v}" class="param-box" style="display:none">Rx: <input type="number" id="crx-${v}" value="150" oninput="updateEntityParam('${v}')"> Ry: <input type="number" id="cry-${v}" value="150" oninput="updateEntityParam('${v}')"></div>
+                                    <div id="p-dimension-${v}" class="param-box" style="display:none; color:#ff9900">物理尺寸: <input type="number" id="dim-val-${v}" value="100" oninput="updateAIScannedDimension('${v}')"></div>
+                                    <div class="param-box">
+                                        <button class="btn-sec" onclick="document.getElementById('fi-${v}').click()">📁 导入</button>
+                                        <button class="btn-sec" onclick="demoScanCADImg('${v}')" style="color:#ffcc00">✨ AI识图</button>
+                                        <input type="file" id="fi-${v}" style="display:none" accept="image/*" onchange="loadImg(event, '${v}')">
+                                    </div>
+                                </div>
                             </div>
-                            <div id="p-rect-${v}" class="param-box" style="display:none">
-                                W: <input type="number" id="rw-${v}" value="200" oninput="updateEntityParam('${v}')"> H: <input type="number" id="rh-${v}" value="200" oninput="updateEntityParam('${v}')">
-                            </div>
-                            <div id="p-circle-${v}" class="param-box" style="display:none">
-                                Rx(宽半): <input type="number" id="crx-${v}" value="150" oninput="updateEntityParam('${v}')">
-                                Ry(高半): <input type="number" id="cry-${v}" value="150" oninput="updateEntityParam('${v}')">
+                            <div class="canvas-container" id="container-${v}">
+                                <img id="img-${v}" class="bg-img" src="">
+                                <canvas id="cv-${v}" class="draw-cv"></canvas>
                             </div>
                         </div>
-                        
-                        <div class="bottom-floating-tools">
-                            <button class="btn btn-sec" onclick="undoPath('${v}')" id="btn-undo-${v}" style="display:none">↶ 撤销描点</button>
-                            <button class="btn btn-sec" onclick="closePath('${v}')" id="btn-close-${v}" style="display:none; color:#deff9a;">✓ 闭合为实体</button>
-                            <button class="btn btn-sec" onclick="deleteSelected('${v}')" id="btn-del-${v}">🗑 删除 (Del)</button>
-                            <button class="btn btn-sec" onclick="clearAll('${v}')">清空</button>
-                        </div>
-                    </div>
-                </div>
-                `);
-            });
-        </script>
-
-        <div class="action-bar">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#aaa">
-                <span><i style="color:#deff9a">●</i> 2. 设定生成深度:</span>
-                <input type="number" id="depth" class="depth-input" value="200" style="width:70px;">
+                    `);
+                });
+            </script>
+        </div>
+        
+        <div class="bottom-actions">
+            <div style="display: flex; gap: 8px; align-items: center; background: #0a0a0a; padding: 10px; border-radius: 6px;">
+                <span style="font-size: 11px; color: #888;">拉伸/特征深度:</span>
+                <input type="number" id="depth" value="300" style="flex-grow:1; background:#222; border:1px solid #444; color:#deff9a; padding:6px; outline:none; font-weight:bold;">
+                <span style="font-size: 11px;">mm</span>
             </div>
-            <button class="btn" style="padding:15px; font-size:14px; margin-top:5px;" onclick="runBuild()">➕ 实例化实体至 3D 场景</button>
+            <button class="btn" onclick="runBuild()">🚀 工业级 3D 实体成型</button>
+            <div style="display: flex; justify-content: space-between;">
+                <button class="btn-sec" onclick="clearCanvasAll()">🧹 清空当前草图</button>
+                <button class="btn-sec" onclick="resetCanvasTransform()">🎯 视窗缩放归零</button>
+            </div>
         </div>
     </div>
-    
-    <div id="center-viewport">
-        <div id="view-cube">
-            <button onclick="setCameraView('iso')" style="color:#deff9a;">[ ISO ] 等轴测</button>
-            <div style="display:flex; gap:5px;">
-                <button onclick="setCameraView('top')" style="flex:1">俯视</button>
-                <button onclick="setCameraView('front')" style="flex:1">主视</button>
-                <button onclick="setCameraView('right')" style="flex:1">右视</button>
-            </div>
-        </div>
 
-        <div id="toggle-panel-btn" onclick="toggleLeftPanel()" title="收起/展开绘图板">◀<br>收<br>起</div>
-        <div id="loading">COMPUTING...</div>
-        <div id="viewport-hints"><span>左键</span>旋转观察 | <span>右键</span>平移视口 | <span>滚轮</span>缩放</div>
-        <div id="viewport"></div>
+<div id="center-viewport">
+        <div id="toggle-panel-btn" onclick="toggleLeftPanel()">◀</div>
+        <div id="view-cube">
+            <button class="cube-face" onclick="setCameraView('iso')">等轴测</button>
+            <button class="cube-face" onclick="setCameraView('top')">俯视图</button>
+            <button class="cube-face" onclick="setCameraView('front')">主视图</button>
+            <button class="cube-face" onclick="setCameraView('right')">侧视图</button>
+        </div>
+        <div id="viewport-hints">[左键] 旋转观察 | [右/中键] 视口平移 | [滚轮] 缩放 | [Shift] 约束2D正交</div>
     </div>
 
     <div id="right-panel">
-            <div class="outliner-header">
-                <span class="title">3D 装配与工程管理器</span>
-                <div class="history-btns">
-                    <button onclick="saveProjectToLocal()" title="保存当前工程到本地">💾 存盘</button>
-                    <button id="btn-undo" onclick="undo3D()">↶</button>
-                    <button id="btn-redo" onclick="redo3D()">↷</button>
-                </div>
+        <div class="outliner-header">
+            <span class="title">3D 工程管理器</span>
+            <div class="history-btns">
+                <button onclick="saveProjectToLocal()">💾 存盘</button>
+                <button id="btn-undo" onclick="undo3D()">↶</button>
+                <button id="btn-redo" onclick="redo3D()">↷</button>
             </div>
-            
-            <details open style="border-bottom: 1px solid #333;">
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">📂 本地工程快照历史</summary>
-                <div id="local-projects" style="background:#111; padding:10px; max-height:160px; overflow-y:auto;">
-                    <div id="project-list-container"></div>
+        </div>
+        
+        <details open style="border-bottom: 1px solid #333;">
+            <summary>📂 本地工程快照历史</summary>
+            <div id="local-projects" style="background:#111; padding:10px; max-height:140px; overflow-y:auto;">
+                <div id="project-list-container"></div>
+            </div>
+        </details>
+
+        <details open style="flex-grow: 1; display: flex; flex-direction: column; border-bottom: 1px solid #333;">
+            <summary>🧱 3D 场景零件清单</summary>
+            <div class="outliner-list" id="outliner-list"></div>
+        </details>
+
+        <details open>
+            <summary>⚙️ 二次加工与特征区</summary>
+            <div style="background: #151515; padding: 15px;">
+                <div style="font-size:11px; color:#aaa; margin-bottom:6px;">基础布尔运算 (请勾选2个及以上):</div>
+                <div class="boolean-row">
+                    <button class="b-union" onclick="execBoolean('union')">并集 ∪</button>
+                    <button class="b-sub" onclick="execBoolean('subtract')">差集 ➖</button>
+                    <button class="b-int" onclick="execBoolean('intersect')">交集 ∩</button>
                 </div>
-            </details>
-        
-            <details open style="flex-grow: 1; display: flex; flex-direction: column; border-bottom: 1px solid #333;">
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">🧱 3D 场景零件清单 (Outliner)</summary>
-                <div class="outliner-list" id="outliner-list" style="max-height: 250px; overflow-y: auto; padding: 5px 10px;"></div>
-            </details>
-        
-            <details style="border-bottom: 1px solid #333;">
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">📐 物理边界测量 (Bounding Box)</summary>
-                <div id="dimension-section" style="display: flex; padding: 10px 15px; background: #111;">
-                    <div class="dim-row" style="width: 100%; display: flex; justify-content: space-between; font-size: 11px;">
-                        <span>宽(X): <span class="val" id="dim-w" style="color:#deff9a;">0.0</span></span>
-                        <span>高(Y): <span class="val" id="dim-h" style="color:#deff9a;">0.0</span></span>
-                        <span>深(Z): <span class="val" id="dim-d" style="color:#deff9a;">0.0</span></span>
-                    </div>
-                </div>
-            </details>
-        
-            <details open>
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">⚙️ 二次加工与特征装配区</summary>
-                <div style="background: #151515;">
+                
+                <div id="entity-tools" style="display:none; flex-direction:column; gap:10px; margin-top:10px; border-top: 1px solid #333; padding-top: 15px;">
+                    <div class="dim-row"><span>物理尺寸:</span> <span>W:<span id="dim-w">0.0</span> H:<span id="dim-h">0.0</span> D:<span id="dim-d">0.0</span></span></div>
                     
-                    <div id="precision-transform" style="border-bottom: 1px solid #222; padding: 10px 15px;">
-                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">精确步进旋转:</div>
-                        <div class="tool-row">
-                            <button class="btn-sec" onclick="rotateSelected('x', 90)">+90° X</button>
-                            <button class="btn-sec" onclick="rotateSelected('y', 90)">+90° Y</button>
-                            <button class="btn-sec" onclick="rotateSelected('z', 90)">+90° Z</button>
-                        </div>
-                        <div class="tool-row" style="margin-top:6px;">
-                            <input type="number" id="custom-deg" value="45" style="width:50px; background:#222; color:#deff9a; border:1px solid #555; text-align:center; padding:4px; border-radius:4px; outline:none; font-size:12px;">
-                            <span style="font-size:11px; color:#888; margin-left:4px; margin-right:8px;">度</span>
-                            <button class="btn-sec" onclick="rotateSelected('x', null)">轴 X</button>
-                            <button class="btn-sec" onclick="rotateSelected('y', null)">轴 Y</button>
-                            <button class="btn-sec" onclick="rotateSelected('z', null)">轴 Z</button>
-                        </div>
+                    <div class="tool-row" style="margin-top:5px; display:flex; gap:5px;">
+                        <button id="t-translate" class="btn-sec active" style="flex:1" onclick="setTransformMode('translate')">移动句柄</button>
+                        <button id="t-rotate" class="btn-sec" style="flex:1" onclick="setTransformMode('rotate')">旋转球</button>
+                        <button id="t-scale" class="btn-sec" style="flex:1" onclick="setTransformMode('scale')">缩放框</button>
                     </div>
-        
-                    <div class="transform-tools" style="border-bottom: 1px solid #222; padding: 10px 15px;">
-                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">操控模式切换:</div>
-                        <div class="tool-row">
-                            <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动轴</button>
-                            <button id="t-rotate" onclick="setTransformMode('rotate')">旋转球</button>
-                            <button id="t-scale" onclick="setTransformMode('scale')">缩放框</button>
-                        </div>
-                        
-                        <div style="font-size:11px; color:#aaa; margin-top:10px; margin-bottom:4px;">对称镜像复制 (针对当前蓝色高亮项):</div>
-                        <div class="tool-row">
-                            <button onclick="cloneSelectedPart()" title="原地克隆副本">📄 复制</button>
-                            <button onclick="mirrorSelectedEntity('yz')">左右(YZ)</button>
-                            <button onclick="mirrorSelectedEntity('xz')">上下(XZ)</button>
-                            <button onclick="mirrorSelectedEntity('xy')">前后(XY)</button>
-                        </div>
-                        
-                        <div style="font-size:11px; color:#aaa; margin-top:10px; margin-bottom:4px;">多实体基准对齐 (多选时以首项为基准面):</div>
-                        <div class="tool-row">
-                            <button onclick="alignEntities('x', 'center')">X 居中</button>
-                            <button onclick="alignEntities('z', 'center')">Z 居中</button>
-                            <button onclick="alignEntities('y', 'top')">Y 顶齐</button>
-                            <button onclick="alignEntities('y', 'bottom')">Y 底齐</button>
-                        </div>
+
+                    <div class="tool-row" style="display:flex; gap:5px;">
+                        <input type="number" id="custom-deg" value="90" style="width:40px; background:#222; color:#deff9a; border:1px solid #555; text-align:center;">
+                        <button class="btn-sec" style="flex:1" onclick="rotateSelected('x', null)">+转X</button>
+                        <button class="btn-sec" style="flex:1" onclick="rotateSelected('y', null)">+转Y</button>
+                        <button class="btn-sec" style="flex:1" onclick="rotateSelected('z', null)">+转Z</button>
                     </div>
-        
-                    <div class="boolean-tools" style="padding: 10px 15px;">
-                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">实体拓扑布尔操作 (勾选生效):</div>
-                        <div class="boolean-row">
-                            <button class="b-union" onclick="execBoolean('union')">并集 ∪</button>
-                            <button class="b-sub" onclick="execBoolean('subtract')">差集 ➖</button>
-                            <button class="b-int" onclick="execBoolean('intersect')">交集 ∩</button>
-                        </div>
-                        
-                        <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:5px;">高级曲面加工特征 (接口预留):</div>
-                        <div class="tool-row">
-                            <button onclick="advancedOpAlert('倒角 (Chamfer)')">📐 倒角</button>
-                            <button onclick="advancedOpAlert('圆角 (Fillet)')">🟡 圆角</button>
-                            <button onclick="advancedOpAlert('中空 (Shell)')">🔲 中空</button>
-                            <button onclick="advancedOpAlert('表面雕刻 (Engrave)')">✒️ 雕刻</button>
-                        </div>
-                        
-                        <button class="btn" style="width:100%; margin-top:14px; padding:10px; font-weight:bold;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
-                        <button style="width:100%; margin-top:6px; padding:6px; background:#441111; color:#ff8888; border:1px solid #662222; border-radius:4px; cursor:pointer; font-size:11px;" onclick="delete3DPart()">🗑 删除选中零件</button>
+
+                    <div class="tool-row" style="display:flex; gap:5px;">
+                        <button class="btn-sec" style="flex:1" onclick="alignEntities('x', 'center')">X居中对齐</button>
+                        <button class="btn-sec" style="flex:1" onclick="alignEntities('z', 'center')">Z居中对齐</button>
+                        <button class="btn-sec" style="flex:1" onclick="alignEntities('y', 'top')">Y底部齐平</button>
                     </div>
-        
+                    
+                    <div class="tool-row" style="display:flex; gap:5px;">
+                        <button class="btn-sec" style="flex:1" onclick="cloneSelectedPart()">📄 原地复制</button>
+                        <button class="btn-sec" style="flex:1" onclick="mirrorSelectedEntity('yz')">左右镜像</button>
+                        <button class="btn-sec" style="flex:1" onclick="mirrorSelectedEntity('xz')">上下镜像</button>
+                    </div>
+                    
+                    <button style="width:100%; padding:8px; margin-top:5px; background:#441111; color:#ff8888; border:1px solid #552222; border-radius:4px; cursor:pointer;" onclick="delete3DPart()">🗑 删除选中零件</button>
                 </div>
-            </details>
-        </div>
-    
-        <div class="boolean-tools">
-            <div style="font-size:11px; color:#aaa;">二次加工 (列表排上方的为主体，下方为刀具):</div>
-            <div class="boolean-row">
-                <button class="b-union" onclick="execBoolean('union')" title="可勾选多个实体">求和 ∪</button>
-                <button class="b-sub" onclick="execBoolean('subtract')">求差 ➖</button>
-                <button class="b-int" onclick="execBoolean('intersect')">求交 ∩</button>
             </div>
-            <button class="btn" style="width:100%; margin-top:5px; padding:12px;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
-        </div>
+        </details>
     </div>
 
     <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { TransformControls } from 'three/addons/controls/TransformControls.js';
-        import { STLExporter } from 'three/addons/exporters/STLExporter.js';
-        import { CSG } from 'three-csg-ts';
+        const data = {};
+        let entityIdCounter = 0; let partCounter = 0; let selected3DPartId = null;
+        const partsList = []; const historyQueue = []; let historyIndex = -1;
 
-        // ================= UI 布局交互 (智能防冲突隐藏) =================
-        // ================= 补丁 2：全屏彻底居中与 UI 净化 =================
-        window.toggleMax = (v) => { 
-            const container = document.getElementById(`container-${v}`);
-            const isFull = container.classList.toggle('fullscreen'); 
-    
-            // 隐藏 3D 操作指南、快捷视角块和中间的收起/展开拨片
-            document.getElementById('viewport-hints').style.display = isFull ? 'none' : 'block';
-            document.getElementById('view-cube').style.display = isFull ? 'none' : 'flex';
-            document.getElementById('toggle-panel-btn').style.display = isFull ? 'none' : 'block';
-    
-            // 强制画布全屏时居中处理
-            if(isFull) {
-                container.style.display = 'flex';
-                container.style.justifyContent = 'center';
-                container.style.alignItems = 'center';
-                window._prevRightPanelDisplay = document.getElementById('right-panel').style.display;
-                document.getElementById('right-panel').style.display = 'none';
-            } else {
-                container.style.display = 'flex';
-                document.getElementById('right-panel').style.display = window._prevRightPanelDisplay || 'none';
-            }
-            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-        };
+        views.forEach(v => { data[v] = { mode: 'select', zoom: 1, panX: 0, panY: 0, entities: [], currentPath: [], selectedId: null, arcState: 0, tempArcEnd: null }; });
 
-        window.toggleLeftPanel = () => {
-            const lp = document.getElementById('left-panel');
-            const btn = document.getElementById('toggle-panel-btn');
-            lp.classList.toggle('collapsed');
-            btn.innerHTML = lp.classList.contains('collapsed') ? '▶<br>展<br>开' : '◀<br>收<br>起';
-            
-            let steps = 0;
-            const resizeInterval = setInterval(() => {
-                window.dispatchEvent(new Event('resize'));
-                if(++steps > 16) clearInterval(resizeInterval); 
-            }, 20);
-        };
+        const tCoord = (val) => val - 500; const tCoordY = (val) => 500 - val;
 
-        window.advancedOpAlert = (name) => {
-            alert(`【${name}】功能接口已就绪。\n\n由于浏览器 WebGL 本地计算性能限制，复杂拓扑级特征（如倒角/雕刻）将接入云端网格引擎计算。敬请期待下一次更新！\n\n💡 替代方案：可在 2D 草图中直接绘制带圆角、中空的精确截面截面，然后进行空间拉伸。`);
-        };
+        const viewport = document.getElementById('center-viewport');
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x131315);
+        const camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 1, 100000); camera.position.set(900, 900, 1300);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false }); renderer.setSize(viewport.clientWidth, viewport.clientHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); viewport.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0x555555)); 
+        const dl1 = new THREE.DirectionalLight(0xffffff, 0.75); dl1.position.set(1500, 2500, 1000); scene.add(dl1);
+        scene.add(new THREE.GridHelper(4000, 80, 0x333333, 0x1c1c1c)).position.y = -0.5;
 
-        // ================= 2D 画布引擎 (Pan/Zoom 与 连续路径防清空) =================
-        const views = ['front', 'top', 'side'];
-        const CV_SIZE = 1000; 
-        const data = { 
-            front: { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }, 
-            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }, 
-            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 } 
-        };
-        let entityIdCounter = 0;
+        const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.05;
+        const tControls = new THREE.TransformControls(camera, renderer.domElement); tControls.size = 0.8; scene.add(tControls);
+        tControls.addEventListener('dragging-changed', (e) => { controls.enabled = !e.value; if(!e.value) { saveSceneState(); if(selected3DPartId) select3DPart(selected3DPartId); } });
 
-        window.switchTab = (v) => {
-            document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelector(`.tab[onclick="switchTab('${v}')"]`).classList.add('active');
-            document.getElementById(`tab-${v}`).classList.add('active');
-        };
-        window.toggleRevolveOptions = () => { document.getElementById('revolve-axis-container').style.display = document.getElementById('gen-strategy').value === 'revolve' ? 'flex' : 'none'; };
+        window.toggleLeftPanel = () => { const lp = document.getElementById('left-panel'); const btn = document.getElementById('toggle-panel-btn'); const collapsed = lp.classList.toggle('collapsed'); btn.innerText = collapsed ? '▶' : '◀'; setTimeout(() => window.dispatchEvent(new Event('resize')), 310); };
+        window.switchTab = (tabName) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); document.getElementById(`tab-${tabName}`).classList.add('active'); renderCanvas(tabName); };
+        window.setMode = (v, mode) => { data[v].mode = mode; data[v].currentPath = []; data[v].arcState = 0; document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; document.getElementById(`p-dimension-${v}`).style.display = 'none'; renderCanvas(v); };    
 
-        window.resetCanvasZoom = (v) => {
-            data[v].panX = 0; data[v].panY = 0; data[v].zoom = 1;
-            document.getElementById(`zoom-wrap-${v}`).style.transform = `translate(0px, 0px) scale(1)`;
-        };
+        let dragState = null; let isPanning = false; let startX, startY;
 
-        window.setMode = (v, mode) => { 
-            const wasDrawing = (data[v].mode === 'line' || data[v].mode === 'arc');
-            const isDrawing = (mode === 'line' || mode === 'arc');
-            
-            data[v].mode = mode; 
-            data[v].selectedId = null; 
-            
-            // 核心修复：在画多边形时，任意切换“线段”与“弧线”，绝对不清除之前的进度！
-            if (!(wasDrawing && isDrawing)) {
-                data[v].currentPath = []; 
-                data[v].arcState = 0; 
-                data[v].tempArcEnd = null;
-            }
+        views.forEach(v => {
+            const cv = document.getElementById(`cv-${v}`); const container = document.getElementById(`container-${v}`);
+            const getCanvasCoords = (vName, e) => { const rect = cv.getBoundingClientRect(); return { cx: (e.clientX - rect.left - data[vName].panX) / data[vName].zoom, cy: (e.clientY - rect.top - data[vName].panY) / data[vName].zoom }; };
+            cv.addEventListener('contextmenu', e => e.preventDefault());
 
-            const cv = document.getElementById(`cv-${v}`); cv.className = mode === 'select' ? 'mode-select' : '';
-            
-            document.getElementById(`p-rect-${v}`).style.display = mode === 'rect' ? 'flex' : 'none';
-            document.getElementById(`p-circle-${v}`).style.display = mode === 'circle' ? 'flex' : 'none';
-            
-            document.getElementById(`btn-undo-${v}`).style.display = isDrawing ? 'inline-block' : 'none';
-            document.getElementById(`btn-close-${v}`).style.display = isDrawing ? 'inline-block' : 'none';
-            document.getElementById(`btn-del-${v}`).style.display = mode === 'select' ? 'inline-block' : 'none';
-            renderCanvas(v);
-        };
-        
-        const renderCanvas = (v) => {
-            const cv = document.getElementById(`cv-${v}`); const ctx = cv.getContext('2d');
-            ctx.clearRect(0,0,CV_SIZE,CV_SIZE);
-            
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 1; ctx.beginPath(); 
-            for(let i=0; i<=CV_SIZE; i+=50){ ctx.moveTo(i,0);ctx.lineTo(i,CV_SIZE);ctx.moveTo(0,i);ctx.lineTo(CV_SIZE,i); } ctx.stroke();
-            ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(CV_SIZE/2,0);ctx.lineTo(CV_SIZE/2,CV_SIZE);ctx.moveTo(0,CV_SIZE/2);ctx.lineTo(CV_SIZE,CV_SIZE/2); ctx.stroke();
+            container.addEventListener('mousedown', (e) => {
+                cv.focus();
+                if (e.button === 1 || e.button === 2) { isPanning = true; startX = e.clientX; startY = e.clientY; return; }
+                if (e.button !== 0 || e.target !== cv) return;
 
-            ctx.fillStyle = '#666'; ctx.font = '11px sans-serif';
-            for(let i=0; i<=CV_SIZE; i+=100) {
-                if(i !== CV_SIZE/2) {
-                    ctx.fillText((i - CV_SIZE/2), i + 4, CV_SIZE/2 - 4); 
-                    ctx.fillText((CV_SIZE/2 - i), CV_SIZE/2 + 4, i - 4); 
-                }
-            }
-
-            // 渲染已有图元
-            data[v].entities.forEach(ent => {
-                const isSelected = ent.id === data[v].selectedId;
-                ctx.strokeStyle = isSelected ? '#ff9900' : '#deff9a'; ctx.lineWidth = isSelected ? 4 : 3;
-                ctx.fillStyle = isSelected ? 'rgba(255, 153, 0, 0.2)' : 'rgba(222,255,154,0.1)';
-                ctx.beginPath();
-                if(ent.type === 'rect') {
-                    ctx.rect(ent.cx - ent.w/2, ent.cy - ent.h/2, ent.w, ent.h);
-                } else if (ent.type === 'circle') {
-                    // 支持画正圆和椭圆
-                    if (ent.r) ctx.arc(ent.cx, ent.cy, ent.r, 0, Math.PI*2); // 兼容旧数据
-                    else ctx.ellipse(ent.cx, ent.cy, ent.rx, ent.ry, 0, 0, Math.PI*2);
-                } else if (ent.type === 'path') {
-                    ctx.moveTo(ent.pts[0].cx, ent.pts[0].cy);
-                    for(let i=1; i<ent.pts.length; i++) {
-                        if(ent.pts[i].type === 'arc') ctx.quadraticCurveTo(ent.pts[i].cpx, ent.pts[i].cpy, ent.pts[i].cx, ent.pts[i].cy);
-                        else ctx.lineTo(ent.pts[i].cx, ent.pts[i].cy);
+                let { cx, cy } = getCanvasCoords(v, e);
+                
+                if (data[v].mode === 'select') {
+                    const hitId = hitTest(v, cx, cy); data[v].selectedId = hitId;
+                    if (hitId !== null) {
+                        const ent = data[v].entities.find(en => en.id === hitId);
+                        dragState = { ent, startX: cx, startY: cy, origCx: ent.cx, origCy: ent.cy };
+                        if (ent.type === 'path') {
+                            dragState.origPts = ent.pts.map(p => ({ cx: p.cx, cy: p.cy }));
+                            for(let i=0; i<ent.pts.length; i++) { if(Math.hypot(cx - ent.pts[i].cx, cy - ent.pts[i].cy) < 12/data[v].zoom) { dragState.pointIndex = i; break; } }
+                        }
+                        if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; } 
+                        else if(ent.type === 'circle') { document.getElementById(`p-circle-${v}`).style.display = 'flex'; document.getElementById(`crx-${v}`).value = ent.rx !== undefined ? ent.rx : (ent.r || 50); document.getElementById(`cry-${v}`).value = ent.ry !== undefined ? ent.ry : (ent.r || 50);}
+                        if(ent.isAIScannedDim) { document.getElementById(`p-dimension-${v}`).style.display = 'flex'; document.getElementById(`dim-val-${v}`).value = ent.scannedValue; }
+                    } else { document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; document.getElementById(`p-dimension-${v}`).style.display = 'none'; }
+                    renderCanvas(v);
+                } 
+                else if (data[v].mode === 'eraser') { const hitId = hitTest(v, cx, cy); if(hitId !== null) { data[v].entities = data[v].entities.filter(en => en.id !== hitId); renderCanvas(v); } }
+                else {
+                    if((data[v].mode === 'line' || data[v].mode === 'arc') && e.shiftKey && data[v].currentPath.length > 0) {
+                        const lastP = data[v].currentPath[data[v].currentPath.length - 1]; if (Math.abs(cx - lastP.cx) < Math.abs(cy - lastP.cy)) cx = lastP.cx; else cy = lastP.cy;
                     }
-                    ctx.closePath();
+                    if(data[v].mode === 'line') {
+                        data[v].currentPath.push({ cx, cy, type: 'line' });
+                        if(data[v].currentPath.length > 1 && Math.hypot(cx - data[v].currentPath[0].cx, cy - data[v].currentPath[0].cy) < 15/data[v].zoom) {
+                            data[v].currentPath[data[v].currentPath.length - 1] = { cx: data[v].currentPath[0].cx, cy: data[v].currentPath[0].cy, type: 'line' };
+                            data[v].entities.push({ id: ++entityIdCounter, type: 'path', pts: data[v].currentPath }); data[v].currentPath = [];
+                        }
+                    } else if(data[v].mode === 'arc') {
+                        if(data[v].arcState === 0) { data[v].currentPath.push({ cx, cy, type: 'line' }); data[v].arcState = 1; }
+                        else if(data[v].arcState === 1) { data[v].tempArcEnd = { cx, cy }; data[v].arcState = 2; }
+                        else if(data[v].arcState === 2) {
+                            data[v].currentPath.push({ cx: data[v].tempArcEnd.cx, cy: data[v].tempArcEnd.cy, type: 'arc', cpx: cx, cpy: cy }); data[v].arcState = 1; data[v].tempArcEnd = null;
+                            if(Math.hypot(cx - data[v].currentPath[0].cx, cy - data[v].currentPath[0].cy) < 15/data[v].zoom) { data[v].entities.push({ id: ++entityIdCounter, type: 'path', pts: data[v].currentPath }); data[v].currentPath = []; data[v].arcState = 0; }
+                        }
+                    } else if(data[v].mode === 'rect') { data[v].entities.push({ id: ++entityIdCounter, type: 'rect', cx, cy, w: parseFloat(document.getElementById(`rw-${v}`).value)||200, h: parseFloat(document.getElementById(`rh-${v}`).value)||150 }); } 
+                      else if(data[v].mode === 'circle') { data[v].entities.push({ id: ++entityIdCounter, type: 'circle', cx, cy, rx: parseFloat(document.getElementById(`crx-${v}`).value)||150, ry: parseFloat(document.getElementById(`cry-${v}`).value)||150 }); }
+                    renderCanvas(v);
                 }
-                ctx.fill(); ctx.stroke();
-                if(isSelected) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ent.cx, ent.cy, 6, 0, Math.PI*2); ctx.fill(); }
             });
 
-            // 渲染手绘临时路径
-            const cPath = data[v].currentPath;
-            if(cPath.length > 0) {
-                ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath();
-                ctx.moveTo(cPath[0].cx, cPath[0].cy);
-                for(let i=1; i<cPath.length; i++) {
-                    if(cPath[i].type === 'arc') ctx.quadraticCurveTo(cPath[i].cpx, cPath[i].cpy, cPath[i].cx, cPath[i].cy);
-                    else ctx.lineTo(cPath[i].cx, cPath[i].cy);
+            container.addEventListener('mousemove', (e) => {
+                if (isPanning) { data[v].panX += e.clientX - startX; data[v].panY += e.clientY - startY; startX = e.clientX; startY = e.clientY; renderCanvas(v); return; }
+                let { cx, cy } = getCanvasCoords(v, e);
+                if((data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) && e.shiftKey && data[v].currentPath.length > 0) {
+                    const lastP = data[v].currentPath[data[v].currentPath.length - 1]; if (Math.abs(cx - lastP.cx) < Math.abs(cy - lastP.cy)) cx = lastP.cx; else cy = lastP.cy;
                 }
-                ctx.stroke();
-                cPath.forEach((p, idx) => { ctx.fillStyle = idx===0?'#ff4444':'#fff'; ctx.beginPath(); ctx.arc(p.cx, p.cy, 5, 0, Math.PI*2); ctx.fill(); });
-            }
-        };
+                if(data[v].mode === 'select' && dragState) {
+                    if (dragState.pointIndex !== undefined) { dragState.ent.pts[dragState.pointIndex] = { cx, cy, type: dragState.ent.pts[dragState.pointIndex].type }; } 
+                    else {
+                        const dx = cx - dragState.startX; const dy = cy - dragState.startY;
+                        if (dragState.ent.type === 'path') { dragState.ent.pts.forEach((p, i) => { p.cx = dragState.origPts[i].cx + dx; p.cy = dragState.origPts[i].cy + dy; }); } 
+                        else { dragState.ent.cx = dragState.origCx + dx; dragState.ent.cy = dragState.origCy + dy; }
+                    } renderCanvas(v);
+                } else if (data[v].mode === 'arc' && data[v].arcState === 2) {
+                    renderCanvas(v); const ctx = cv.getContext('2d'); const cPath = data[v].currentPath; const startP = cPath[cPath.length - 1]; const endP = data[v].tempArcEnd;
+                    ctx.save(); ctx.translate(data[v].panX, data[v].panY); ctx.scale(data[v].zoom, data[v].zoom);
+                    ctx.strokeStyle = '#ff9900'; ctx.lineWidth = 2/data[v].zoom; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(startP.cx, startP.cy); ctx.quadraticCurveTo(cx, cy, endP.cx, endP.cy); ctx.stroke();
+                    ctx.fillStyle = '#ff9900'; ctx.beginPath(); ctx.arc(cx, cy, 4/data[v].zoom, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                } else if (data[v].mode === 'eraser' && (e.buttons === 1 || e.buttons === 2)) {
+                    const hitId = hitTest(v, cx, cy); if(hitId !== null) { data[v].entities = data[v].entities.filter(en => en.id !== hitId); renderCanvas(v); }
+                }
+            });
 
-        const hitTest = (v, px, py) => {
+            window.addEventListener('mouseup', () => { dragState = null; isPanning = false; });
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault(); const oldZoom = data[v].zoom; data[v].zoom *= (e.deltaY < 0) ? 1.15 : (1 / 1.15); data[v].zoom = Math.max(0.02, Math.min(data[v].zoom, 80));
+                const rect = cv.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                data[v].panX = mouseX - (mouseX - data[v].panX) * (data[v].zoom / oldZoom); data[v].panY = mouseY - (mouseY - data[v].panY) * (data[v].zoom / oldZoom); renderCanvas(v);
+            }, { passive: false });
+        });
+
+        const hitTest = (v, cx, cy) => {
+            const tol = 14 / data[v].zoom;
             for (let i = data[v].entities.length - 1; i >= 0; i--) {
                 const ent = data[v].entities[i];
-                if (ent.type === 'circle' && Math.hypot(px - ent.cx, py - ent.cy) <= ent.r) return ent.id;
-                if (ent.type === 'rect' && px >= ent.cx - ent.w/2 && px <= ent.cx + ent.w/2 && py >= ent.cy - ent.h/2 && py <= ent.cy + ent.h/2) return ent.id;
-            }
-            return null;
+                if (ent.type === 'rect' && Math.abs(cx - ent.cx) < ent.w/2 && Math.abs(cy - ent.cy) < ent.h/2) return ent.id;
+                if (ent.type === 'circle') { const rx = ent.rx !== undefined ? ent.rx : (ent.r || 50); const ry = ent.ry !== undefined ? ent.ry : (ent.r || 50); if (Math.hypot((cx - ent.cx)/rx, (cy - ent.cy)/ry) <= 1.0) return ent.id; }
+                if (ent.type === 'path') { for (let p of ent.pts) { if (Math.hypot(cx - p.cx, cy - p.cy) < tol) return ent.id; } }
+            } return null;
         };
 
-        // 获取经过缩放矩阵还原后的鼠标实际坐标
-        const getCanvasCoords = (v, e) => {
-            const cv = document.getElementById(`cv-${v}`); 
-            // getBoundingClientRect 能够自动包含 CSS 缩放产生的大小变化
-            const r = cv.getBoundingClientRect(); 
-            const scale = r.width / CV_SIZE; 
-            return { cx: (e.clientX - r.left) / scale, cy: (e.clientY - r.top) / scale };
-        };
+        const renderCanvas = (v) => {
+            const cv = document.getElementById(`cv-${v}`); if (!cv) return;
+            const ctx = cv.getContext('2d'); const img = document.getElementById(`img-${v}`); const dInfo = data[v];
+            cv.width = cv.parentElement.clientWidth; cv.height = cv.parentElement.clientHeight; ctx.clearRect(0, 0, cv.width, cv.height);
+            if (img && img.src && img.complete) { img.style.transform = `translate(${dInfo.panX}px, ${dInfo.panY}px) scale(${dInfo.zoom})`; }
+            ctx.save(); ctx.translate(dInfo.panX, dInfo.panY); ctx.scale(dInfo.zoom, dInfo.zoom);
+            ctx.strokeStyle = '#232325'; ctx.lineWidth = 0.5 / dInfo.zoom;
+            for(let x=0; x<2500; x+=50) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,2500); ctx.stroke(); }
+            for(let y=0; y<2500; y+=50) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(2500,y); ctx.stroke(); }
 
-        // 全局平移状态
-        let activePanView = null;
-        let startPanX = 0, startPanY = 0;
-
-        window.addEventListener('mousemove', (e) => {
-            if (activePanView) {
-                const v = activePanView;
-                data[v].panX = e.clientX - startPanX;
-                data[v].panY = e.clientY - startPanY;
-                document.getElementById(`zoom-wrap-${v}`).style.transform = `translate(${data[v].panX}px, ${data[v].panY}px) scale(${data[v].zoom})`;
+            if(dInfo.currentPath.length > 0) {
+                ctx.strokeStyle = '#deff9a'; ctx.lineWidth = 2.5 / dInfo.zoom; ctx.beginPath(); ctx.moveTo(dInfo.currentPath[0].cx, dInfo.currentPath[0].cy);
+                for(let i=1; i<dInfo.currentPath.length; i++) { if(dInfo.currentPath[i].type === 'arc') ctx.quadraticCurveTo(dInfo.currentPath[i].cpx, dInfo.currentPath[i].cpy, dInfo.currentPath[i].cx, dInfo.currentPath[i].cy); else ctx.lineTo(dInfo.currentPath[i].cx, dInfo.currentPath[i].cy); } ctx.stroke();
             }
-        });
-        window.addEventListener('mouseup', () => {
-            if(activePanView) { document.getElementById(`container-${activePanView}`).style.cursor = 'default'; activePanView = null; }
-        });
-
-        // ================= 补丁 5：恢复 Ctrl+V 粘贴底图与按钮导入功能 =================
-        // 1. 恢复：点击“📁 导入底图”按钮的读取功能
-        window.loadImg = (event, v) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById(`img-${v}`).src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-        
-        // 2. 增强：全局监听 Ctrl+V 直接粘贴剪贴板图片
-        window.addEventListener('paste', (e) => {
-            // 识别当前激活的是哪个视图 (主视/俯视/侧视)
-            const activeTab = document.querySelector('.tab-content.active');
-            if (!activeTab) return;
-            const v = activeTab.id.replace('tab-', '');
-            
-            // 遍历剪贴板内容，寻找图片
-            const items = e.clipboardData.items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        // 将读取到的图片直接赋值给当前画布底下的 img 标签
-                        document.getElementById(`img-${v}`).src = event.target.result;
-                    };
-                    reader.readAsDataURL(blob);
-                    break; // 找到第一张图片就停止，防止粘贴多张导致卡顿
-                }
-            }
-        });
-        
-        views.forEach(v => {
-            const container = document.getElementById(`container-${v}`);
-            const wrap = document.getElementById(`zoom-wrap-${v}`);
-            const cv = document.getElementById(`cv-${v}`);
-            let dragState = null;
-
-            // --- 滚轮无极缩放 (聚焦鼠标位置缩放) ---
-            container.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const zoomAmount = e.deltaY > 0 ? 0.9 : 1.1;
-                const rect = container.getBoundingClientRect();
-                const mx = e.clientX - rect.left;
-                const my = e.clientY - rect.top;
-
-                data[v].panX = mx - (mx - data[v].panX) * zoomAmount;
-                data[v].panY = my - (my - data[v].panY) * zoomAmount;
-                data[v].zoom *= zoomAmount;
-                
-                // 限制缩放比例
-                if(data[v].zoom < 0.2) data[v].zoom = 0.2;
-                if(data[v].zoom > 10) data[v].zoom = 10;
-                
-                wrap.style.transform = `translate(${data[v].panX}px, ${data[v].panY}px) scale(${data[v].zoom})`;
-            });
-
-            // 屏蔽外层系统右键菜单 (为了右键平移和输入尺寸)
-            container.addEventListener('contextmenu', e => e.preventDefault());
-
-            cv.addEventListener('keydown', (e) => { if ((e.key === 'Delete' || e.key === 'Backspace') && data[v].selectedId !== null) window.deleteSelected(v); });
-
-            // --- 画布鼠标按下 (区分绘制、拖拽和平移) ---
-            container.addEventListener('mousedown', (e) => {
-                // 中键，或者非线段模式下的右键 -> 触发画布平移
-                if (e.button === 1 || (e.button === 2 && data[v].mode !== 'line' && data[v].mode !== 'arc')) {
-                    e.preventDefault();
-                    activePanView = v;
-                    startPanX = e.clientX - data[v].panX;
-                    startPanY = e.clientY - data[v].panY;
-                    container.style.cursor = 'grabbing';
-                    return;
-                }
-                
-                // 如果不是左键且不是右键(绘图菜单)，退出
-                if(e.button !== 0 && e.button !== 2) return;
-                
-                // 如果按在浮动工具上，退出
-                if(e.target !== cv) return;
-
-                cv.focus();
-                let { cx, cy } = getCanvasCoords(v, e);
-                
-                if (e.button === 0) { // 左键逻辑
-                    if (data[v].mode === 'select') {
-                        const hitId = hitTest(v, cx, cy); data[v].selectedId = hitId;
-                        
-                        if (hitId !== null) {
-                            const ent = data[v].entities.find(en => en.id === hitId);
-                            dragState = { ent, startX: cx, startY: cy, origCx: ent.cx, origCy: ent.cy };
-                            
-                            // 🌟 新增：检测是否点中了路径上的某个顶点
-                            if (ent.type === 'path') {
-                                dragState.origPts = ent.pts.map(p => ({ cx: p.cx, cy: p.cy }));
-                                const clickTolerance = 10 / data[v].zoom;
-                                for(let i=0; i<ent.pts.length; i++) {
-                                    if(Math.hypot(cx - ent.pts[i].cx, cy - ent.pts[i].cy) < clickTolerance) {
-                                        dragState.pointIndex = i; // 记录被点中的节点索引
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; } 
-                            else if(ent.type === 'circle') { document.getElementById(`p-circle-${v}`).style.display = 'flex'; document.getElementById(`cr-${v}`).value = ent.r; }
-                        } else { 
-                            document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; 
-                        }
-                        renderCanvas(v);
-                    }
-                        
-                    else {
-                        // 正交吸附容差放大
-                        if((data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) && data[v].currentPath.length > 0) {
-                            // 只有按住键盘的 Shift 键，才会强制画水平或垂直的直线！否则绝对自由。
-                            if (e.shiftKey) {
-                                const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                                if (Math.abs(cx - lastP.cx) < Math.abs(cy - lastP.cy)) cx = lastP.cx; 
-                                else cy = lastP.cy;
-                            }
-                        }
-                        
-                        if(data[v].mode === 'rect') {
-                            const w = parseFloat(document.getElementById(`rw-${v}`).value) || 100; const h = parseFloat(document.getElementById(`rh-${v}`).value) || 100;
-                            data[v].entities.push({ id: ++entityIdCounter, type: 'rect', cx, cy, w, h });
-                        } else if(data[v].mode === 'circle') {
-                                // 实例化时直接获取当前输入框设定的横纵半径
-                                const rx = parseFloat(document.getElementById(`crx-${v}`).value) || 150;
-                                const ry = parseFloat(document.getElementById(`cry-${v}`).value) || 150;
-                                data[v].entities.push({ id: ++entityIdCounter, type: 'circle', cx, cy, rx, ry });
-                            } else {
-                            if(data[v].currentPath.length === 0) {
-                                data[v].currentPath.push({ type: 'start', cx, cy });
-                            } else {
-                                if (data[v].mode === 'line') {
-                                    data[v].currentPath.push({ type: 'line', cx, cy });
-                                } else if (data[v].mode === 'arc') {
-                                    if (data[v].arcState === 0) {
-                                        data[v].tempArcEnd = { cx, cy }; data[v].arcState = 1;
-                                    } else {
-                                        data[v].currentPath.push({ type: 'arc', cx: data[v].tempArcEnd.cx, cy: data[v].tempArcEnd.cy, cpx: cx, cpy: cy });
-                                        data[v].arcState = 0; data[v].tempArcEnd = null;
-                                    }
-                                }
-                            }
-                        }
-                        renderCanvas(v);
-                    }
-                } 
-                else if (e.button === 2) { // 右键绘制直线精确长度
-                    if(data[v].mode !== 'line' || data[v].currentPath.length === 0) return;
-                    const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                    
-                    if (Math.abs(cx - lastP.cx) < 30 / data[v].zoom) cx = lastP.cx;
-                    else if (Math.abs(cy - lastP.cy) < 30 / data[v].zoom) cy = lastP.cy;
-                    
-                    let dx = cx - lastP.cx, dy = cy - lastP.cy; const len = Math.sqrt(dx*dx + dy*dy); if(len === 0) return;
-                    dx /= len; dy /= len; 
-                    
-                    const distStr = prompt("输入沿此方向的精确长度 (mm):", "50");
-                    if(distStr && !isNaN(parseFloat(distStr))) { data[v].currentPath.push({ type: 'line', cx: lastP.cx + dx * parseFloat(distStr), cy: lastP.cy + dy * parseFloat(distStr) }); renderCanvas(v); }
-                }
-            });
-
-            // ================= 补丁 3：实时的弧度控制拉伸预览 =================
-        cv.addEventListener('mousemove', (e) => {
-            let { cx, cy } = getCanvasCoords(v, e);
-
-            // 【新代码：支持整体移动与单节点移动】
-            if(data[v].mode === 'select' && dragState) {
-                let { cx, cy } = getCanvasCoords(v, e);
-                
-                // 如果点中了某个具体节点
-                if (dragState.pointIndex !== undefined) {
-                    const pt = dragState.ent.pts[dragState.pointIndex];
-                    pt.cx = cx; pt.cy = cy;
-                } else {
-                    // 否则整体移动
-                    const dx = cx - dragState.startX;
-                    const dy = cy - dragState.startY;
-                    
-                    if (dragState.ent.type === 'path') {
-                        dragState.ent.pts.forEach((p, i) => {
-                            p.cx = dragState.origPts[i].cx + dx;
-                            p.cy = dragState.origPts[i].cy + dy;
-                        });
-                    } else {
-                        dragState.ent.cx = dragState.origCx + dx;
-                        dragState.ent.cy = dragState.origCy + dy;
-                    }
-                }
-                renderCanvas(v);
-            }
-                
-            // 当处于弧度调整阶段 (arcState === 1) 时，实时重绘带控制线和动态虚线的画布
-            else if (data[v].mode === 'arc' && data[v].arcState === 1) {
-                renderCanvas(v); // 先画底层稳定图元
-        
-                const cvEl = document.getElementById(`cv-${v}`);
-                const ctx = cvEl.getContext('2d');
-                const cPath = data[v].currentPath;
-                const startP = cPath[cPath.length - 1]; // 弧线起点
-                const endP = data[v].tempArcEnd;       // 弧线终点
-
-                // 绘制实时变化的二次贝塞尔弧线（黄色虚线）
-                ctx.strokeStyle = '#ff9900';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([6, 6]);
+            dInfo.entities.forEach(ent => {
+                const isSel = ent.id === dInfo.selectedId; ctx.strokeStyle = isSel ? '#00aaff' : (ent.isAIScannedDim ? '#ff9900' : '#deff9a'); ctx.lineWidth = isSel ? (3.5 / dInfo.zoom) : (2.0 / dInfo.zoom); ctx.fillStyle = isSel ? 'rgba(0,170,255,0.15)' : 'rgba(222,255,154,0.05)';
                 ctx.beginPath();
-                ctx.moveTo(startP.cx, startP.cy);
-                ctx.quadraticCurveTo(cx, cy, endP.cx, endP.cy); // 鼠标当前点作为控制点
-                ctx.stroke();
-
-                // 绘制控制柄辅助线（白色细线）
-                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(startP.cx, startP.cy); ctx.lineTo(cx, cy);
-                ctx.lineTo(endP.cx, endP.cy);
-                ctx.stroke();
-                ctx.setLineDash([]); // 恢复实线
-
-                // 绘制当前鼠标控制点小圆圈
-                ctx.fillStyle = '#ff9900';
-                ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
-            }
-        });
-            cv.addEventListener('mouseup', () => { dragState = null; });
-            
-            window.undoPath = (vv) => { 
-                if(data[vv].currentPath.length > 0) { 
-                    if(data[vv].arcState === 1) { data[vv].arcState = 0; data[vv].tempArcEnd = null; } 
-                    else { data[vv].currentPath.pop(); } 
-                    renderCanvas(vv); 
-                } 
-            };
-            
-            window.closePath = (vv) => { 
-                if(data[vv].currentPath.length > 2) { 
-                    let sumX=0, sumY=0; data[vv].currentPath.forEach(p=>{sumX+=p.cx; sumY+=p.cy;});
-                    data[vv].entities.push({ id: ++entityIdCounter, type: 'path', cx: sumX/data[vv].currentPath.length, cy: sumY/data[vv].currentPath.length, pts: [...data[vv].currentPath] });
-                    data[vv].currentPath = []; document.getElementById(`ms-${vv}`).click(); 
-                } 
-            };
-            
-            window.deleteSelected = (vv) => { if(data[vv].selectedId !== null) { data[vv].entities = data[vv].entities.filter(e => e.id !== data[vv].selectedId); data[vv].selectedId = null; renderCanvas(vv); } };
-            window.clearAll = (vv) => { data[vv].entities = []; data[vv].currentPath = []; data[vv].selectedId = null; renderCanvas(vv); };
-            window.updateEntityParam = (vv) => {
-                const ent = data[vv].entities.find(e => e.id === data[vv].selectedId);
-                if(ent && ent.type === 'circle') {
-                    // 读取新的 Rx 和 Ry 参数
-                    ent.rx = parseFloat(document.getElementById(`crx-${vv}`).value) || 10;
-                    ent.ry = parseFloat(document.getElementById(`cry-${vv}`).value) || 10;
-                    renderCanvas(vv);
-                } else if (ent && ent.type === 'rect') {
-                    ent.w = parseFloat(document.getElementById(`rw-${vv}`).value) || 10;
-                    ent.h = parseFloat(document.getElementById(`rh-${vv}`).value) || 10;
-                    renderCanvas(vv);
-                }
-            };
-            renderCanvas(v); 
-        });
-
-        // ================= 核心 3D 架构 =================
-        const scene = new THREE.Scene(); 
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 10000);
-        camera.position.set(800, 800, 800);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(document.getElementById('viewport').clientWidth, document.getElementById('viewport').clientHeight);
-        document.getElementById('viewport').appendChild(renderer.domElement);
-        
-        const controls = new OrbitControls(camera, renderer.domElement);
-        const tControls = new TransformControls(camera, renderer.domElement);
-        
-        tControls.addEventListener('dragging-changed', (e) => { 
-            controls.enabled = !e.value; 
-            if(!e.value) saveSceneState(); 
-        });
-        tControls.addEventListener('change', () => { updateHUD(); }); 
-        scene.add(tControls);
-        
-        scene.add(new THREE.GridHelper(2000, 100, 0x222222, 0x111111));
-        scene.add(new THREE.AxesHelper(500)); 
-        scene.add(new THREE.DirectionalLight(0xffffff, 0.8)).position.set(200, 500, 200);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-
-        // 视口快捷导航控制
-        // ================= 补丁 1：智能视角居中与全景缩放 =================
-        window.setCameraView = (view) => {
-            // 1. 计算当前场景中所有实体的总包围盒
-            const bounds = new THREE.Box3();
-            let hasObjects = false;
-            partsList.forEach(p => {
-                bounds.expandByObject(p.mesh);
-                hasObjects = true;
-            });
-
-            // 如果场景是空的，就围绕原点建立默认包围盒
-            if (!hasObjects) {
-                bounds.set(new THREE.Vector3(-200,-200,-200), new THREE.Vector3(200,200,200));
-            }
-
-            const center = new THREE.Vector3();
-            const size = new THREE.Vector3();
-            bounds.getCenter(center);
-            bounds.getSize(size);
-
-            // 2. 根据物体尺寸动态计算相机应当后退的距离，确保完全可见
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-            cameraZ *= 1.4; // 留出 40% 的安全边距
-
-            // 3. 让轨道控制器聚焦在物体的几何中心
-            controls.target.copy(center);
-
-            // 4. 根据选定的视图方向，设定相机空间坐标
-            if (view === 'iso') {
-                camera.position.set(center.x + cameraZ, center.y + cameraZ, center.z + cameraZ);
-            } else if (view === 'top') {
-                camera.position.set(center.x, center.y + cameraZ, center.z);
-            } else if (view === 'front') {
-                camera.position.set(center.x, center.y, center.z + cameraZ);
-            } else if (view === 'right') {
-                camera.position.set(center.x + cameraZ, center.y, center.z);
-            }
-
-            controls.update();
+                if(ent.type === 'rect') ctx.rect(ent.cx - ent.w/2, ent.cy - ent.h/2, ent.w, ent.h);
+                else if (ent.type === 'circle') { ctx.ellipse(ent.cx, ent.cy, ent.rx!==undefined?ent.rx:(ent.r||50), ent.ry!==undefined?ent.ry:(ent.r||50), 0, 0, Math.PI*2); }
+                else if (ent.type === 'path') { ctx.moveTo(ent.pts[0].cx, ent.pts[0].cy); for(let i=1; i<ent.pts.length; i++) { if(ent.pts[i].type === 'arc') ctx.quadraticCurveTo(ent.pts[i].cpx, ent.pts[i].cpy, ent.pts[i].cx, ent.pts[i].cy); else ctx.lineTo(ent.pts[i].cx, ent.pts[i].cy); } }
+                ctx.fill(); ctx.stroke();
+                if(isSel && ent.type === 'path') { ent.pts.forEach(p => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.cx, p.cy, 4/dInfo.zoom, 0, Math.PI*2); ctx.fill(); }); }
+            }); ctx.restore();
         };
 
-        const partsList = []; 
-        let partCounter = 0;
-        let selected3DPartId = null;
+        window.updateEntityParam = (vv) => {
+            const ent = data[vv].entities.find(e => e.id === data[vv].selectedId);
+            if(ent && ent.type === 'circle') { ent.rx = parseFloat(document.getElementById(`crx-${vv}`).value) || 10; ent.ry = parseFloat(document.getElementById(`cry-${vv}`).value) || 10; } 
+            else if (ent && ent.type === 'rect') { ent.w = parseFloat(document.getElementById(`rw-${vv}`).value) || 10; ent.h = parseFloat(document.getElementById(`rh-${vv}`).value) || 10; } renderCanvas(vv);
+        };
+        window.clearCanvasAll = () => { const aV = document.querySelector('.tab-content.active').id.replace('tab-', ''); data[aV].entities = []; data[aV].currentPath = []; data[aV].selectedId = null; renderCanvas(aV); };
+        window.resetCanvasTransform = () => { const aV = document.querySelector('.tab-content.active').id.replace('tab-', ''); data[aV].zoom = 1; data[aV].panX = 0; data[aV].panY = 0; renderCanvas(aV); };
+        window.toggleRevolveOptions = () => { document.getElementById('revolve-axis-box').style.display = document.getElementById('gen-strategy').value === 'revolve' ? 'flex' : 'none'; };
+        window.toggleMax = (v) => { const container = document.getElementById(`container-${v}`); container.classList.toggle('fullscreen'); setTimeout(() => window.dispatchEvent(new Event('resize')), 50); };
 
-        // --- 历史状态管理 ---
-        const sceneHistory = [];
-        let historyIndex = -1;
-
-        const updateHistoryUI = () => {
-            document.getElementById('btn-undo').disabled = historyIndex <= 0;
-            document.getElementById('btn-redo').disabled = historyIndex >= sceneHistory.length - 1;
+        const buildViewCSG = (vData, depth) => {
+            if (vData.entities.length === 0) return null; let finalCSG = null;
+            vData.entities.forEach(ent => {
+                const s = new THREE.Shape();
+                if (ent.type === 'rect') { const x = tCoord(ent.cx), y = tCoordY(ent.cy), w = ent.w, h = ent.h; s.moveTo(x - w/2, y - h/2); s.lineTo(x + w/2, y - h/2); s.lineTo(x + w/2, y + h/2); s.lineTo(x - w/2, y + h/2); s.closePath(); } 
+                else if (ent.type === 'circle') { s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), ent.rx!==undefined?ent.rx:(ent.r||50), ent.ry!==undefined?ent.ry:(ent.r||50), 0, Math.PI * 2, false); } 
+                else if (ent.type === 'path') { s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy)); for (let i = 1; i < ent.pts.length; i++) { if (ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy)); else s.lineTo(tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy)); } s.closePath(); }
+                const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: depth, bevelEnabled: false }).translate(0, 0, -depth/2)); 
+                finalCSG = finalCSG ? finalCSG.union(CSG.fromMesh(mesh)) : CSG.fromMesh(mesh);
+            }); return finalCSG;
         };
 
-        const saveSceneState = () => {
-            if (historyIndex < sceneHistory.length - 1) sceneHistory.splice(historyIndex + 1);
-            const state = partsList.map(p => ({ id: p.id, name: p.name, mesh: p.mesh.clone() }));
-            sceneHistory.push(state);
-            if (sceneHistory.length > 30) sceneHistory.shift(); 
-            historyIndex = sceneHistory.length - 1;
-            updateHistoryUI();
-        };
-
-        const loadState = (idx) => {
-            partsList.forEach(p => scene.remove(p.mesh));
-            partsList.length = 0;
-            tControls.detach();
-            selected3DPartId = null;
-            document.getElementById('dimension-section').style.display = 'none';
-            document.getElementById('precision-transform').style.display = 'none';
-
-            sceneHistory[idx].forEach(sp => {
-                const restoredMesh = sp.mesh.clone();
-                scene.add(restoredMesh);
-                partsList.push({ id: sp.id, name: sp.name, mesh: restoredMesh });
-            });
-            refreshOutliner();
-            updateHistoryUI();
-        };
-
-        window.undo3D = () => { if(historyIndex > 0) { historyIndex--; loadState(historyIndex); } };
-        window.redo3D = () => { if(historyIndex < sceneHistory.length - 1) { historyIndex++; loadState(historyIndex); } };
-
-        saveSceneState(); 
-
-        // --- 智能 UI 渲染与高亮机制 ---
-        const updateEdgeColors = () => {
-            partsList.forEach(part => {
-                part.mesh.children.forEach(child => {
-                    if (child.isLineSegments) {
-                        if (part.id === selected3DPartId) {
-                            child.material.color.setHex(0xff9900);
-                            child.material.opacity = 0.9;
-                        } else {
-                            child.material.color.setHex(0xffffff); 
-                            child.material.opacity = 0.3;
-                        }
+        window.runBuild = () => {
+            const strategy = document.getElementById('gen-strategy').value; const activeV = document.querySelector('.tab-content.active').id.replace('tab-', ''); const d = parseFloat(document.getElementById('depth').value); document.getElementById('loading').style.display = 'flex';
+            setTimeout(() => {
+                let newMesh = null;
+                try {
+                    const mat = new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide });
+                    if (strategy === 'intersect') {
+                        const csgF = buildViewCSG(data.front, d), csgT = buildViewCSG(data.top, d), csgS = buildViewCSG(data.side, d); if(!csgF || !csgT || !csgS) throw new Error("三视图均需有图形！");
+                        const mF = CSG.toMesh(csgF, new THREE.Matrix4(), mat); mF.updateMatrix(); const mT = CSG.toMesh(csgT, new THREE.Matrix4(), mat); mT.rotation.x = Math.PI/2; mT.updateMatrix(); const mS = CSG.toMesh(csgS, new THREE.Matrix4(), mat); mS.rotation.y = Math.PI/2; mS.updateMatrix();
+                        newMesh = CSG.toMesh(CSG.fromMesh(mF).intersect(CSG.fromMesh(mT)).intersect(CSG.fromMesh(mS)), new THREE.Matrix4(), mat);
+                    } 
+                    else if (strategy === 'extrude') {
+                        const csgV = buildViewCSG(data[activeV], d); if(!csgV) throw new Error("无图形！"); newMesh = CSG.toMesh(csgV, new THREE.Matrix4(), mat); if (activeV === 'top') newMesh.rotation.x = Math.PI/2; if (activeV === 'side') newMesh.rotation.y = Math.PI/2;
+                    } 
+                    else if (strategy === 'revolve') {
+                        if(data[activeV].entities.length === 0) throw new Error("无图形！"); const ent = data[activeV].entities[0]; const s = new THREE.Shape();
+                        if(ent.type === 'circle') s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), ent.rx!==undefined?ent.rx:(ent.r||50), ent.ry!==undefined?ent.ry:(ent.r||50), 0, Math.PI * 2, false);
+                        else if(ent.type === 'rect') { const x=tCoord(ent.cx), y=tCoordY(ent.cy); s.moveTo(x-ent.w/2,y-ent.h/2); s.lineTo(x+ent.w/2,y-ent.h/2); s.lineTo(x+ent.w/2,y+ent.h/2); s.lineTo(x-ent.w/2,y+ent.h/2); s.closePath(); }
+                        else { s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy)); for(let i=1; i<ent.pts.length; i++) { if(ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy)); else s.lineTo(tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy)); } s.closePath(); }
+                        const axis = document.querySelector('input[name="r-axis"]:checked').value; const pts2D = s.getPoints(60); let p3D = []; let rot = new THREE.Euler();
+                        if (activeV === 'front') { if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(p.y, p.x)); rot.set(0, 0, -Math.PI/2); } else { p3D = pts2D.map(p => new THREE.Vector2(p.x, p.y)); rot.set(0, 0, 0); } }
+                        else if (activeV === 'top') { if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(-p.y, p.x)); rot.set(0, 0, -Math.PI/2); } else { p3D = pts2D.map(p => new THREE.Vector2(p.x, -p.y)); rot.set(Math.PI/2, 0, 0); } }
+                        else { if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(-p.x, p.y)); rot.set(0, 0, 0); } else { p3D = pts2D.map(p => new THREE.Vector2(p.y, -p.x)); rot.set(Math.PI/2, 0, 0); } }
+                        newMesh = new THREE.Mesh(new THREE.LatheGeometry(p3D, 64), mat); newMesh.rotation.copy(rot);
                     }
-                });
-            });
+                    else if (strategy === 'sweep') {
+                        if(data.front.entities.length === 0 || (data.side.currentPath.length === 0 && data.side.entities.length === 0)) throw new Error("需主视截面+侧视路径！");
+                        const ent = data.front.entities[0]; const shape = new THREE.Shape(); let cx = 0, cy = 0;
+                        if(ent.type === 'path') { ent.pts.forEach(p => { cx += tCoord(p.cx); cy += tCoordY(p.cy); }); cx /= ent.pts.length; cy /= ent.pts.length; } else { cx = tCoord(ent.cx); cy = tCoordY(ent.cy); }
+                        if(ent.type === 'circle') shape.absellipse(0, 0, ent.rx!==undefined?ent.rx:(ent.r||50), ent.ry!==undefined?ent.ry:(ent.r||50), 0, Math.PI * 2, false);
+                        else if(ent.type === 'rect') { shape.moveTo(-ent.w/2, -ent.h/2); shape.lineTo(ent.w/2, -ent.h/2); shape.lineTo(ent.w/2, ent.h/2); shape.lineTo(-ent.w/2, ent.h/2); shape.closePath(); }
+                        else { shape.moveTo(tCoord(ent.pts[0].cx)-cx, tCoordY(ent.pts[0].cy)-cy); for(let i=1; i<ent.pts.length; i++) { if(ent.pts[i].type === 'arc') shape.quadraticCurveTo(tCoord(ent.pts[i].cpx)-cx, tCoordY(ent.pts[i].cpy)-cy, tCoord(ent.pts[i].cx)-cx, tCoordY(ent.pts[i].cy)-cy); else shape.lineTo(tCoord(ent.pts[i].cx)-cx, tCoordY(ent.pts[i].cy)-cy); } shape.closePath(); }
+                        const pathEntity = data.side.currentPath.length > 0 ? { pts: data.side.currentPath } : data.side.entities.find(e => e.type === 'path');
+                        if (!pathEntity) throw new Error("无有效扫掠路径！");
+                        const sweepPath = new THREE.CatmullRomCurve3(pathEntity.pts.map(p => new THREE.Vector3(0, tCoordY(p.cy), tCoord(p.cx))), false, 'centripetal', 0.5);
+                        newMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { steps: 120, bevelEnabled: false, extrudePath: sweepPath }), mat);
+                    }
+                    if (newMesh) {
+                        newMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 })));
+                        const newId = `Part_${++partCounter}`; partsList.push({ id: newId, name: `${strategy}_${newId}`, mesh: newMesh }); scene.add(newMesh); refreshOutliner(); select3DPart(newId); saveSceneState();
+                    }
+                } catch(e) { alert("造型失败: " + e.message); } finally { document.getElementById('loading').style.display = 'none'; }
+            }, 50);
         };
 
-        const refreshOutliner = () => {
-            const outlinerPanel = document.getElementById('right-panel');
-            if (partsList.length === 0) { outlinerPanel.style.display = 'none'; return; } 
-            else { 
-                outlinerPanel.style.display = 'flex'; 
-                if(!document.getElementById('left-panel').classList.contains('collapsed')) window.dispatchEvent(new Event('resize')); 
-            }
-
-            const container = document.getElementById('outliner-list');
-            container.innerHTML = '';
-            
-            partsList.forEach(part => {
-                const div = document.createElement('div');
-                div.className = `outliner-item ${part.id === selected3DPartId ? 'active' : ''}`;
-                
-                const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = `cb-${part.id}`;
-                cb.onclick = (e) => e.stopPropagation();
-
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'item-name'; nameSpan.innerText = part.name;
-
-                div.appendChild(cb); div.appendChild(nameSpan);
-                div.onclick = () => select3DPart(part.id);
-                container.appendChild(div);
-            });
-        };
-
-        const select3DPart = (id) => {
-            selected3DPartId = id; 
-            refreshOutliner();
-            updateEdgeColors(); 
+        window.setTransformMode = (mode) => { tControls.setMode(mode); document.querySelectorAll('.btn-sec').forEach(b => b.classList.remove('active')); document.getElementById(`t-${mode}`).classList.add('active'); };
+        window.cloneSelectedPart = () => { if(!selected3DPartId) return; const p = partsList.find(x => x.id === selected3DPartId); const m = p.mesh.clone(); const newId = `Part_${++partCounter}`; partsList.push({ id: newId, name: `${p.name}_副本`, mesh: m }); scene.add(m); refreshOutliner(); select3DPart(newId); saveSceneState(); };
+        
+        window.select3DPart = (id) => {
+            selected3DPartId = id; document.querySelectorAll('.outliner-item').forEach(el => el.classList.remove('active'));
+            const activeEl = document.getElementById(`item-${id}`); if(activeEl) activeEl.classList.add('active');
             const part = partsList.find(p => p.id === id);
-            if(part) { 
+            if(part) {
                 tControls.attach(part.mesh); 
-                document.getElementById('dimension-section').style.display = 'flex';
-                document.getElementById('precision-transform').style.display = 'flex';
-                updateHUD(); 
-            } else { 
-                tControls.detach(); 
-                document.getElementById('dimension-section').style.display = 'none';
-                document.getElementById('precision-transform').style.display = 'none';
+                document.getElementById('entity-tools').style.display = 'flex'; // 关键修复：用 flex-column 展开，消除错位
+                part.mesh.updateMatrixWorld(true); const size = new THREE.Vector3(); new THREE.Box3().setFromObject(part.mesh).getSize(size);
+                document.getElementById('dim-w').innerText = (size.x * 0.1).toFixed(1); document.getElementById('dim-h').innerText = (size.y * 0.1).toFixed(1); document.getElementById('dim-d').innerText = (size.z * 0.1).toFixed(1);
             }
-        };
-
-        // 精确参数化旋转
-        window.rotateSelected = (axis, presetDeg) => {
-            if(!selected3DPartId) return;
-            const part = partsList.find(p => p.id === selected3DPartId);
-            if(!part) return;
-            
-            const degrees = presetDeg !== null ? presetDeg : parseFloat(document.getElementById('custom-deg').value);
-            if(isNaN(degrees)) return alert("请输入有效的度数");
-            
-            const rad = THREE.MathUtils.degToRad(degrees);
-            if(axis === 'x') part.mesh.rotateX(rad);
-            if(axis === 'y') part.mesh.rotateY(rad);
-            if(axis === 'z') part.mesh.rotateZ(rad);
-            
-            updateHUD();
-            saveSceneState();
-        };
-
-        const updateHUD = () => {
-            if(!selected3DPartId) return;
-            const part = partsList.find(p => p.id === selected3DPartId);
-            part.mesh.updateMatrixWorld(true);
-            const box = new THREE.Box3().setFromObject(part.mesh);
-            const size = new THREE.Vector3(); box.getSize(size);
-            document.getElementById('dim-w').innerText = size.x.toFixed(2);
-            document.getElementById('dim-h').innerText = size.y.toFixed(2);
-            document.getElementById('dim-d').innerText = size.z.toFixed(2);
-        };
-
-        window.setTransformMode = (mode) => {
-            tControls.setMode(mode);
-            document.getElementById('t-translate').className = mode === 'translate' ? 'active' : '';
-            document.getElementById('t-rotate').className = mode === 'rotate' ? 'active' : '';
-            document.getElementById('t-scale').className = mode === 'scale' ? 'active' : '';
-        };
-
-        window.cloneSelectedPart = () => {
-            if(!selected3DPartId) return alert("请先选中要复制的实体！");
-            const part = partsList.find(p => p.id === selected3DPartId);
-            const newMesh = part.mesh.clone();
-            newMesh.position.x += 50; newMesh.position.y += 50;
-            const newId = `Part_${++partCounter}`;
-            partsList.push({ id: newId, name: `${part.name}_副本`, mesh: newMesh });
-            scene.add(newMesh);
-            refreshOutliner();
-            select3DPart(newId);
-            saveSceneState();
         };
 
         window.delete3DPart = () => {
-            if(!selected3DPartId) return;
-            const index = partsList.findIndex(p => p.id === selected3DPartId);
-            scene.remove(partsList[index].mesh); tControls.detach(); partsList.splice(index, 1);
-            selected3DPartId = null; 
-            document.getElementById('dimension-section').style.display = 'none';
-            document.getElementById('precision-transform').style.display = 'none';
-            refreshOutliner();
-            saveSceneState();
+            if(!selected3DPartId) return; const p = partsList.find(x => x.id === selected3DPartId); scene.remove(p.mesh); partsList.splice(partsList.indexOf(p),1);
+            tControls.detach(); selected3DPartId = null; document.getElementById('entity-tools').style.display = 'none'; refreshOutliner(); saveSceneState();
         };
 
-        const getCheckedParts = () => partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked);
+        window.refreshOutliner = () => {
+            const container = document.getElementById('outliner-list'); if(!container) return;
+            container.innerHTML = partsList.map(p => `<div class="outliner-item" id="item-${p.id}" onclick="select3DPart('${p.id}')"><div><input type="checkbox" id="cb-${p.id}" onclick="event.stopPropagation()"> <span>${p.name}</span></div><span style="font-size:10px;opacity:0.3;">ID:${p.id}</span></div>`).join('');
+        };
 
-        // ================= 补丁 B-1：多实体精确对齐算法 =================
+        window.rotateSelected = (axis, angle) => {
+            if (!selected3DPartId) return; const part = partsList.find(p => p.id === selected3DPartId);
+            const rad = (angle !== null ? angle : parseFloat(document.getElementById('custom-deg').value) || 0) * (Math.PI / 180);
+            if(axis === 'x') part.mesh.rotation.x += rad; if(axis === 'y') part.mesh.rotation.y += rad; if(axis === 'z') part.mesh.rotation.z += rad; saveSceneState();
+        };
+
         window.alignEntities = (axis, mode) => {
-            const checked = getCheckedParts();
-            if(checked.length < 2) return alert("对齐失败：请在右侧列表中勾选至少 2 个实体（排第一的为主体）！");
-            
-            const targetMaster = checked[0].mesh; // 第一个勾选的为主体基準
-            targetMaster.updateMatrixWorld(true);
-            const masterBox = new THREE.Box3().setFromObject(targetMaster);
-            const masterCenter = new THREE.Vector3(); masterBox.getCenter(masterCenter);
-            
-            // 遍历其余选中的工具体进行空间对齐移动
+            const checked = partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked); if(checked.length < 2) return alert("请勾选2项以上！");
+            checked[0].mesh.updateMatrixWorld(true); const mBox = new THREE.Box3().setFromObject(checked[0].mesh); const mCenter = new THREE.Vector3(); mBox.getCenter(mCenter);
             for(let i = 1; i < checked.length; i++) {
-                const toolMesh = checked[i].mesh;
-                toolMesh.updateMatrixWorld(true);
-                const toolBox = new THREE.Box3().setFromObject(toolMesh);
-                const toolCenter = new THREE.Vector3(); toolBox.getCenter(toolCenter);
-                
-                // 计算轴向位置差
-                if(axis === 'x' && mode === 'center') toolMesh.position.x += (masterCenter.x - toolCenter.x);
-                if(axis === 'z' && mode === 'center') toolMesh.position.z += (masterCenter.z - toolCenter.z);
-                if(axis === 'y' && mode === 'top')    toolMesh.position.y += (masterBox.max.y - toolBox.max.y);
-                if(axis === 'y' && mode === 'bottom') toolMesh.position.y += (masterBox.min.y - toolBox.min.y);
-            }
-            tControls.detach(); select3DPart(checked[0].id); // 刷新句柄
-            saveSceneState();
+                checked[i].mesh.updateMatrixWorld(true); const tBox = new THREE.Box3().setFromObject(checked[i].mesh); const tCenter = new THREE.Vector3(); tBox.getCenter(tCenter);
+                if(axis === 'x' && mode === 'center') checked[i].mesh.position.x += (mCenter.x - tCenter.x);
+                if(axis === 'z' && mode === 'center') checked[i].mesh.position.z += (mCenter.z - tCenter.z);
+                if(axis === 'y' && mode === 'top') checked[i].mesh.position.y += (mBox.max.y - tBox.max.y);
+                if(axis === 'y' && mode === 'bottom') checked[i].mesh.position.y += (mBox.min.y - tBox.min.y);
+            } tControls.detach(); select3DPart(checked[0].id); saveSceneState();
         };
-        
-        // ================= 补丁 B-2：空间镜面镜像克隆算法 =================
+
         window.mirrorSelectedEntity = (plane) => {
-            if(!selected3DPartId) return alert("请先在列表中点击选中需要镜像的母体零件！");
-            const part = partsList.find(p => p.id === selected3DPartId);
-            
-            // 克隆母体
-            const mirroredMesh = part.mesh.clone();
-            mirroredMesh.material = part.mesh.material.clone();
-            mirroredMesh.material.side = THREE.DoubleSide; // 强行启用双面，防止负缩放导致法线内翻隐形
-            
-            // 根据选定的镜面，对相应的轴向坐标和缩放尺寸进行取反变换
-            if(plane === 'yz') { mirroredMesh.scale.x *= -1; mirroredMesh.position.x *= -1; } // 关于左右镜像
-            if(plane === 'xz') { mirroredMesh.scale.y *= -1; mirroredMesh.position.y *= -1; } // 关于上下镜像
-            if(plane === 'xy') { mirroredMesh.scale.z *= -1; mirroredMesh.position.z *= -1; } // 关于前后镜像
-            
-            // 重新附加上边缘高亮线
-            const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mirroredMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
-            mirroredMesh.add(edge);
-            
-            const newId = `Part_${++partCounter}`;
-            partsList.push({ id: newId, name: `${part.name}_镜像件`, mesh: mirroredMesh });
-            scene.add(mirroredMesh);
-            refreshOutliner();
-            select3DPart(newId);
-            saveSceneState();
+            if(!selected3DPartId) return alert("请先选中零件！"); const part = partsList.find(p => p.id === selected3DPartId);
+            const mirroredMesh = part.mesh.clone(); mirroredMesh.material = part.mesh.material.clone(); mirroredMesh.material.side = THREE.DoubleSide;
+            if(plane === 'yz') { mirroredMesh.scale.x *= -1; mirroredMesh.position.x *= -1; } if(plane === 'xz') { mirroredMesh.scale.y *= -1; mirroredMesh.position.y *= -1; } if(plane === 'xy') { mirroredMesh.scale.z *= -1; mirroredMesh.position.z *= -1; }
+            mirroredMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mirroredMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 })));
+            const newId = `Part_${++partCounter}`; partsList.push({ id: newId, name: `${part.name}_镜像件`, mesh: mirroredMesh }); scene.add(mirroredMesh); refreshOutliner(); select3DPart(newId); saveSceneState();
         };
-        
-        // ================= ★ 微米级容差防崩的布尔引擎 (Auto-Epsilon Rescue) =================
-        // ================= 补丁 4：烘焙级矩阵解耦防崩溃布尔引擎 =================
+
         window.execBoolean = (operation) => {
-            const checked = getCheckedParts();
-            if(operation === 'union' && checked.length < 2) return alert("求和运算请至少勾选 2 个及以上的实体！");
-            if(operation !== 'union' && checked.length !== 2) return alert("求差/求交运算请严格勾选 2 个实体！");
-            
-            const loading = document.getElementById('loading');
-            loading.style.display = 'flex'; // 开启遮罩
-            
-            // 强制 UI 渲染遮罩后再进行重计算
+            const checked = partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked); if(checked.length < 2) return alert("操作需要至少2个实体！");
+            document.getElementById('loading').style.display = 'flex';
             setTimeout(() => {
                 const safeHistoryIdx = historyIndex;
                 try {
-                    saveSceneState();
-                    checked.forEach(p => p.mesh.updateMatrixWorld(true));
-                    
-                    const cleanAndExtractCSG = (part) => {
-                        const tempGeo = part.mesh.geometry.clone();
-                        tempGeo.applyMatrix4(part.mesh.matrixWorld);
-                        const tempMesh = new THREE.Mesh(tempGeo);
-                        return CSG.fromMesh(tempMesh);
-                    };
-        
-                    let resultCSG = cleanAndExtractCSG(checked[0]);
-        
-                    if(operation === 'union') {
-                        for (let i = 1; i < checked.length; i++) {
-                            try {
-                                resultCSG = resultCSG.union(cleanAndExtractCSG(checked[i]));
-                            } catch(e) {
-                                console.warn("单体求和失败，尝试微量偏移抢救...");
-                                const rescueTool = checked[i].mesh.clone();
-                                rescueTool.position.addScalar(0.001);
-                                rescueTool.updateMatrixWorld(true);
-                                resultCSG = resultCSG.union(cleanAndExtractCSG({mesh: rescueTool}));
-                            }
-                        }
-                    } else {
-                        // 求差或求交逻辑
-                        const csgB = cleanAndExtractCSG(checked[1]);
-                        try {
-                            resultCSG = (operation === 'subtract') ? resultCSG.subtract(csgB) : resultCSG.intersect(csgB);
-                        } catch(e) {
-                            const rescueB = checked[1].mesh.clone();
-                            rescueB.position.addScalar(0.001);
-                            rescueB.updateMatrixWorld(true);
-                            const csgB_R = cleanAndExtractCSG({mesh: rescueB});
-                            resultCSG = (operation === 'subtract') ? resultCSG.subtract(csgB_R) : resultCSG.intersect(csgB_R);
-                        }
+                    saveSceneState(); checked.forEach(p => p.mesh.updateMatrixWorld(true));
+                    // 增加极微小扰动 (0.005mm)，强力击碎 Three-CSG 共面死锁
+                    const getCSG = (m, shift=false) => { const geo = m.geometry.clone(); if(shift) geo.translate((Math.random()-0.5)*0.005, (Math.random()-0.5)*0.005, (Math.random()-0.5)*0.005); geo.applyMatrix4(m.matrixWorld); return CSG.fromMesh(new THREE.Mesh(geo)); };
+                    let res = getCSG(checked[0].mesh);
+                    if(operation === 'union') { for(let i=1; i<checked.length; i++) { try { res = res.union(getCSG(checked[i].mesh)); } catch(e) { res = res.union(getCSG(checked[i].mesh, true)); } } } 
+                    else {
+                        try { if(operation === 'subtract') res = res.subtract(getCSG(checked[1].mesh)); else res = res.intersect(getCSG(checked[1].mesh)); } 
+                        catch(e) { if(operation === 'subtract') res = getCSG(checked[0].mesh).subtract(getCSG(checked[1].mesh, true)); else res = getCSG(checked[0].mesh).intersect(getCSG(checked[1].mesh, true)); }
                     }
-                    
-                    if (!resultCSG || resultCSG.polygons.length === 0) throw new Error("ResultEmpty");
-        
-                    // 生成最终 Mesh 并清理旧零件（保持之前的代码...）
+                    if (!res || res.polygons.length === 0) throw new Error("Null");
                     const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide });
-                    const newMesh = CSG.toMesh(resultCSG, new THREE.Matrix4(), mat);
-                    newMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
-                    
-                    checked.forEach(part => { scene.remove(part.mesh); partsList.splice(partsList.indexOf(part), 1); });
-                    tControls.detach();
-                    
-                    const newId = `Part_${++partCounter}`;
-                    partsList.push({ id: newId, name: `布尔组件_${newId}`, mesh: newMesh });
-                    scene.add(newMesh);
-                    refreshOutliner();
-                    select3DPart(newId);
-                    saveSceneState();
-        
-                } catch(e) {
-                    console.error("Critical Boolean Error:", e);
-                    loadState(safeHistoryIdx);
-                    alert("⚠️ 运算崩溃：模型可能完全重合或拓扑逻辑冲突。已自动恢复。");
-                } finally {
-                    loading.style.display = 'none'; // 强制关闭遮罩，无论成功还是报错
-                }
+                    const newMesh = CSG.toMesh(res, new THREE.Matrix4(), mat); newMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 })));
+                    checked.forEach(part => { scene.remove(part.mesh); partsList.splice(partsList.indexOf(part), 1); }); tControls.detach();
+                    const newId = `Part_${++partCounter}`; partsList.push({ id: newId, name: `布尔组件_${newId}`, mesh: newMesh }); scene.add(newMesh); refreshOutliner(); select3DPart(newId); saveSceneState();
+                } catch(e) { loadState(safeHistoryIdx); alert("布尔碰撞死锁已拦截，系统自动恢复场景。请将裁切体微调移动 0.05mm 避开绝对共面后再试。"); } finally { document.getElementById('loading').style.display = 'none'; }
             }, 50);
         };
 
-        // ================= 图元生成 3D 逻辑 =================
-        const tCoord = (c) => Math.round((c - CV_SIZE/2) * 10) / 10;
-        const tCoordY = (c) => Math.round((CV_SIZE/2 - c) * 10) / 10;
+        window.loadImg = (event, v) => { const file = event.target.files[0]; if (file) { const r = new FileReader(); r.onload = (e) => { document.getElementById(`img-${v}`).src = e.target.result; renderCanvas(v); }; r.readAsDataURL(file); } };
+        window.addEventListener('paste', (e) => { const activeTab = document.querySelector('.tab-content.active'); if (!activeTab) return; const v = activeTab.id.replace('tab-', ''); const items = e.clipboardData.items; for (let i = 0; i < items.length; i++) { if (items[i].type.indexOf('image') !== -1) { const blob = items[i].getAsFile(); const r = new FileReader(); r.onload = (event) => { document.getElementById(`img-${v}`).src = event.target.result; setTimeout(() => renderCanvas(v), 100); }; r.readAsDataURL(blob); break; } } });
+        window.updateAIScannedDimension = (vv) => { const ent = data[vv].entities.find(e => e.id === data[vv].selectedId); if(!ent || !ent.isAIScannedDim || !ent.measuredLength) return; const scaleFactor = (parseFloat(document.getElementById(`dim-val-${vv}`).value) || 100) / ent.measuredLength; data[vv].entities.forEach(otherEnt => { if(otherEnt.scannedFromImg) { otherEnt.cx *= scaleFactor; otherEnt.cy *= scaleFactor; if(otherEnt.w) otherEnt.w *= scaleFactor; if(otherEnt.h) otherEnt.h *= scaleFactor; if(otherEnt.rx) otherEnt.rx *= scaleFactor; if(otherEnt.ry) otherEnt.ry *= scaleFactor; if(otherEnt.pts) otherEnt.pts.forEach(p => { p.cx *= scaleFactor; p.cy *= scaleFactor; }); } }); renderCanvas(vv); };
+        window.demoScanCADImg = (v) => { const demoData = [ { type: 'rect', cx: 500, cy: 500, w: 550, h: 350 }, { type: 'circle', cx: 500, cy: 500, rx: 75, ry: 75 }, { type: 'path', cx: 500, cy: 500, pts: [ {cx: 120, cy: 500}, {cx: 880, cy: 500} ] }, { type: 'rect', cx: 500, cy: 220, w: 2, h: 50 }, { type: 'rect', cx: 500, cy: 220, w: 550, h: 2 }, { type: 'circle', cx: 500, cy: 160, rx: 25, ry: 25, isAIScannedDim: true, measuredLength: 550, scannedValue: 220 } ]; data[v].entities = demoData.map(ent => ({ ...ent, id: ++entityIdCounter, scannedFromImg: true })); renderCanvas(v); };
 
-        const buildViewCSG = (vData, depth) => {
-            if(vData.entities.length === 0) return null;
-            let unionCSG = null;
-            const extSet = { depth: depth, bevelEnabled: false, curveSegments: 64 };
-            vData.entities.forEach(ent => {
-                const s = new THREE.Shape();
-                if(ent.type === 'rect') {
-                    const x = tCoord(ent.cx), y = tCoordY(ent.cy), w = Math.round(ent.w*10)/10, h = Math.round(ent.h*10)/10;
-                    s.moveTo(x - w/2, y - h/2); s.lineTo(x + w/2, y - h/2); s.lineTo(x + w/2, y + h/2); s.lineTo(x - w/2, y + h/2); s.lineTo(x - w/2, y - h/2);
-                } else if(ent.type === 'circle') {
-                    const rx = ent.rx ? ent.rx : ent.r;
-                    const ry = ent.ry ? ent.ry : ent.r;
-                    s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), Math.round(rx*10)/10, Math.round(ry*10)/10, 0, Math.PI * 2, false);
-                } else if(ent.type === 'path') {
-                    s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy));
-                    for(let i=1; i<ent.pts.length; i++) {
-                        if(ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
-                        else s.lineTo(tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
-                    }
-                    s.closePath();
-                }
-                const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(s, extSet).translate(0,0,-depth/2));
-                mesh.updateMatrix();
-                unionCSG = unionCSG ? unionCSG.union(CSG.fromMesh(mesh)) : CSG.fromMesh(mesh);
-            });
-            return unionCSG;
-        };
-
-        // ================= 补丁 2：防止空壳组件入库 ＆ 强化圆形扫掠旋转支持 =================
-        window.runBuild = () => {
-            const strategy = document.getElementById('gen-strategy').value;
-            const activeV = document.querySelector('.tab-content.active').id.replace('tab-', '');
-            const d = parseFloat(document.getElementById('depth').value);
-            
-            document.getElementById('loading').style.display = 'flex';
-            
-            setTimeout(() => {
-                let newMesh = null; // 初始化为空，确保后面生成失败时绝对无法入库
-                try {
-                    const mat = new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
+        const saveSceneState = () => { const snap = partsList.map(p => ({ name: p.name, geo: p.mesh.geometry.clone(), mat: p.mesh.material.clone(), pos: p.mesh.position.clone(), rot: p.mesh.rotation.clone(), sc: p.mesh.scale.clone() })); historyQueue.splice(historyIndex + 1); historyQueue.push(snap); historyIndex++; document.getElementById('btn-undo').disabled = historyIndex <= 0; document.getElementById('btn-redo').disabled = historyIndex >= historyQueue.length - 1; };
+        const loadState = (idx) => { if(idx < 0 || idx >= historyQueue.length) return; historyIndex = idx; partsList.forEach(p => scene.remove(p.mesh)); partsList.length = 0; historyQueue[idx].forEach(s => { const m = new THREE.Mesh(s.geo.clone(), s.mat.clone()); m.position.copy(s.pos); m.rotation.copy(s.rot); m.scale.copy(s.sc); m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 }))); const newId = `Part_${++partCounter}`; partsList.push({ id: newId, name: s.name, mesh: m }); scene.add(m); }); tControls.detach(); refreshOutliner(); document.getElementById('btn-undo').disabled = historyIndex <= 0; document.getElementById('btn-redo').disabled = historyIndex >= historyQueue.length - 1; };
+        window.undo3D = () => loadState(historyIndex - 1); window.redo3D = () => loadState(historyIndex + 1);
+        window.saveProjectToLocal = () => { const name = prompt("请输入存档名称:", "APEX_" + new Date().toLocaleTimeString()); if(!name) return; renderer.render(scene, camera); const thumb = renderer.domElement.toDataURL("image/jpeg", 0.4); const pData = { name: name, time: new Date().toLocaleString(), thumb: thumb }; const saved = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]"); saved.unshift(pData); localStorage.setItem("APEX_PROJECTS", JSON.stringify(saved.slice(0, 8))); renderProjectList(); };
+        window.renderProjectList = () => { const container = document.getElementById('project-list-container'); if(!container) return; const projects = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]"); if(projects.length === 0) { container.innerHTML = `<div style="font-size:11px; color:#444; text-align:center; padding:5px;">暂无本地存档记录</div>`; return; } container.innerHTML = projects.map(p => `<div class="outliner-item" style="gap:10px; padding:5px; margin-bottom:4px; align-items:center;"><img src="${p.thumb}" style="width:36px; height:36px; border-radius:4px; border:1px solid #444; object-fit:cover;"><div style="flex:1; overflow:hidden;"><div style="font-size:11px; font-weight:bold; color:#deff9a; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${p.name}</div><div style="font-size:9px; color:#555;">${p.time}</div></div></div>`).join(''); };
+        window.setCameraView = (view) => { const bounds = new THREE.Box3(); let hasObj = false; partsList.forEach(p => { bounds.expandByObject(p.mesh); hasObj = true; }); if (!hasObj) bounds.set(new THREE.Vector3(-200,-200,-200), new THREE.Vector3(200,200,200)); const center = new THREE.Vector3(); const size = new THREE.Vector3(); bounds.getCenter(center); bounds.getSize(size); const cameraZ = Math.abs(Math.max(size.x, size.y, size.z) / 2 / Math.tan(camera.fov * (Math.PI / 180) / 2)) * 1.4; controls.target.copy(center); if (view === 'iso') camera.position.set(center.x + cameraZ, center.y + cameraZ, center.z + cameraZ); else if (view === 'top') camera.position.set(center.x, center.y + cameraZ, center.z); else if (view === 'front') camera.position.set(center.x, center.y, center.z + cameraZ); else if (view === 'right') camera.position.set(center.x + cameraZ, center.y, center.z); controls.update(); };
         
-                    if (strategy === 'intersect') {
-                        const csgF = buildViewCSG(data.front, d), csgT = buildViewCSG(data.top, d), csgS = buildViewCSG(data.side, d);
-                        if(!csgF || !csgT || !csgS) throw new Error("三轴交集需要主、俯、侧三个视图都至少画有一个闭合图元！");
-                        const mF = CSG.toMesh(csgF, new THREE.Matrix4(), mat); mF.updateMatrix();
-                        const mT = CSG.toMesh(csgT, new THREE.Matrix4(), mat); mT.rotation.x = Math.PI/2; mT.updateMatrix();
-                        const mS = CSG.toMesh(csgS, new THREE.Matrix4(), mat); mS.rotation.y = Math.PI/2; mS.updateMatrix();
-                        let res = CSG.fromMesh(mF).intersect(CSG.fromMesh(mT)).intersect(CSG.fromMesh(mS));
-                        newMesh = CSG.toMesh(res, new THREE.Matrix4(), mat);
-                    } 
-                    else if (strategy === 'extrude') {
-                        const csgV = buildViewCSG(data[activeV], d);
-                        if(!csgV) throw new Error("当前画布没有任何图形！");
-                        newMesh = CSG.toMesh(csgV, new THREE.Matrix4(), mat);
-                        if (activeV === 'top') newMesh.rotation.x = Math.PI/2;
-                        if (activeV === 'side') newMesh.rotation.y = Math.PI/2;
-                    } 
-                    else if (strategy === 'revolve') {
-                        if(data[activeV].entities.length === 0) throw new Error("当前画布没有任何图形！");
-                        const ent = data[activeV].entities[0];
-                        const s = new THREE.Shape();
-                        
-                        // 🌟 核心修复：旋转逻辑全面适配椭圆及正圆参数 rx / ry
-                        if(ent.type === 'circle') {
-                            const rx = ent.rx !== undefined ? ent.rx : ent.r;
-                            const ry = ent.ry !== undefined ? ent.ry : ent.r;
-                            s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), Math.round(rx*10)/10, Math.round(ry*10)/10, 0, Math.PI * 2, false);
-                        } else if(ent.type === 'rect') { 
-                            const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h; 
-                            s.moveTo(x-w/2,y-h/2); s.lineTo(x+w/2,y-h/2); s.lineTo(x+w/2,y+h/2); s.lineTo(x-w/2,y+h/2); s.closePath(); 
-                        } else {
-                            s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy));
-                            for(let i=1; i<ent.pts.length; i++) {
-                                if(ent.pts[i].type === 'arc') s.quadraticCurveTo(tCoord(ent.pts[i].cpx), tCoordY(ent.pts[i].cpy), tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
-                                else s.lineTo(tCoord(ent.pts[i].cx), tCoordY(ent.pts[i].cy));
-                            }
-                            s.closePath();
-                        }
-                        
-                        const axis = document.querySelector('input[name="r-axis"]:checked').value;
-                        const pts2D = s.getPoints(50);
-                        let p3D = []; let rot = new THREE.Euler();
-                        if (activeV === 'front') { 
-                            if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(p.y, p.x)); rot.set(0, 0, -Math.PI/2); } 
-                            else if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(p.x, p.y)); rot.set(0, 0, 0); } 
-                            else throw new Error("主视图只能绕X或Y轴旋转");
-                        } else if (activeV === 'top') { 
-                            if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(-p.y, p.x)); rot.set(0, 0, -Math.PI/2); } 
-                            else if (axis === 'Z') { p3D = pts2D.map(p => new THREE.Vector2(p.x, -p.y)); rot.set(Math.PI/2, 0, 0); } 
-                        } else if (activeV === 'side') { 
-                            if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(-p.x, p.y)); rot.set(0, 0, 0); } 
-                            else if (axis === 'Z') { p3D = pts2D.map(p => new THREE.Vector2(p.y, -p.x)); rot.set(Math.PI/2, 0, 0); } 
-                        }
-                        newMesh = new THREE.Mesh(new THREE.LatheGeometry(p3D, 64), mat);
-                        newMesh.rotation.copy(rot);
-                    }
-                    // 扫掠分支（strategy === 'sweep'）保持上一版本的修正即可...
-                    
-                    // 🌟 核心拦截机制：只有物理网格真正实例化成功后，才允许向场景及列表灌入数据！
-                    if (newMesh) {
-                        const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
-                        newMesh.add(edge); 
-                        
-                        const newId = `Part_${++partCounter}`;
-                        const strategyName = strategy === 'intersect' ? '交集件' : (strategy === 'extrude' ? '拉伸件' : (strategy === 'revolve' ? '旋转件' : '扫掠件'));
-                        
-                        // 只有在这里才写入列表，彻底杜绝僵尸零件空壳
-                        partsList.push({ id: newId, name: `${strategyName}_${newId}`, mesh: newMesh });
-                        scene.add(newMesh);
-                        
-                        refreshOutliner();
-                        select3DPart(newId);
-                        saveSceneState();
-                    }
-        
-                } catch(e) { 
-                    console.error(e); 
-                    alert("⚠️ 特征成型中止：\n" + (e.message || "几何计算发生拓扑死锁。")); 
-                } finally {
-                    document.getElementById('loading').style.display = 'none';
-                }
-            }, 50);
-        };
-
-        window.exportSelectedSTL = () => {
-            if(!selected3DPartId) return alert("请先在右侧列表中勾选并点击你要导出的实体！");
-            const part = partsList.find(p => p.id === selected3DPartId);
-            const name = prompt("STL 文件名:", part.name);
-            if(name) {
-                const blob = new Blob([new STLExporter().parse(part.mesh)], { type: 'text/plain' });
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
-                a.download = `${name}.stl`; a.click();
-            }
-        };
-
-        function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); }
-        ani();
-
-        // ================= 补丁 3：本地存盘与预览提取 =================
-        window.saveProjectToLocal = () => {
-            const name = prompt("请输入工程名称:", "我的设计_" + new Date().toLocaleTimeString());
-            if(!name) return;
-        
-            // 1. 抓取 3D 视图截图作为预览
-            renderer.render(scene, camera);
-            const thumb = renderer.domElement.toDataURL("image/jpeg", 0.5);
-        
-            // 2. 序列化零件（此处简化，实际生产建议保存 2D data 和零件位置参数）
-            // 为了不卡死 localStorage，我们仅演示结构化存档。
-            const projectData = {
-                name: name,
-                time: new Date().toLocaleString(),
-                thumb: thumb,
-                sceneState: partsList.map(p => ({
-                    name: p.name,
-                    position: p.mesh.position.toArray(),
-                    rotation: p.mesh.rotation.toArray(),
-                    scale: p.mesh.scale.toArray(),
-                    // 提示：复杂布尔后的 Geometry 很大，此处通常保存“生成历史序列”而非网格
-                }))
-            };
-        
-            const savedProjects = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]");
-            savedProjects.unshift(projectData);
-            localStorage.setItem("APEX_PROJECTS", JSON.stringify(savedProjects.slice(0, 10))); // 仅保留最近10个
-            renderProjectList();
-        };
-        
-        // ================= 补丁 3：工程存盘与弹性初始化容错 =================
-        window.renderProjectList = () => {
-            const container = document.getElementById('project-list-container');
-            if(!container) return; // 🌟 关键防御线：如果 DOM 节点由于折叠还未渲染出来，静默退出防止页面代码挂起
-            
-            const projects = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]");
-            if(projects.length === 0) {
-                container.innerHTML = `<div style="font-size:11px; color:#555; text-align:center; padding:10px;">暂无本地快照，请点击上方[💾存盘]</div>`;
-                return;
-            }
-            
-            container.innerHTML = projects.map((p, idx) => `
-                <div class="outliner-item" style="gap:10px; padding:5px; margin-bottom:4px; align-items:center;" onclick="alert('快照读取模块已挂载，正在反序列化网格快照...')">
-                    <img src="${p.thumb}" style="width:40px; height:40px; border-radius:4px; border:1px solid #444; object-fit:cover;">
-                    <div style="flex:1; overflow:hidden;">
-                        <div style="font-size:11px; font-weight:bold; color:#deff9a; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${p.name}</div>
-                        <div style="font-size:9px; color:#555;">${p.time}</div>
-                    </div>
-                </div>
-            `).join('');
-        };
-        
-        // 初始化载入列表
+        function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); } ani();
         setTimeout(renderProjectList, 1000);
-        
-        window.addEventListener('resize', () => {
-            const container = document.getElementById('center-viewport');
-            const w = container.clientWidth, h = container.clientHeight;
-            camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
-        });
-
-        // ================= 补丁 G-1：修正扫掠的归零中心与 centripetal 类型 =================
+        window.addEventListener('resize', () => { const container = document.getElementById('center-viewport'); camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); });
     </script>
 </body>
 </html>
