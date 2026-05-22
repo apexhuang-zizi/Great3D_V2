@@ -5,103 +5,220 @@
     <title>APEX CAD ENGINE - PRO 满血参数版</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #121212; color: #fff; flex-direction: row; }
-        
+
         /* === 左侧 2D 绘图面板 === */
         #left-panel { flex: 0 0 480px; width: 480px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; position: relative; transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         #left-panel.collapsed { margin-left: -480px; }
-        
+
         .panel-header { padding: 20px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .top-settings { padding: 15px 20px; background: #0a0a0a; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+        .top-settings { padding: 15px 20px; background: #0a0a0a; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 6px; }
         .top-settings select { background: #222; color: #deff9a; border: 1px solid #444; padding: 6px; border-radius: 4px; outline: none; width: 100%; font-weight: bold; }
-        
+
         .tabs { display: flex; background: #222; border-bottom: 1px solid #333; }
-        .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-size: 13px; color: #666; transition: 0.2s; }
+        .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-size: 11px; color: #666; transition: 0.2s; }
         .tab.active { color: #deff9a; background: #1a1a1a; border-bottom: 2px solid #deff9a; }
         .tab-content { display: none; padding: 15px 20px; flex-grow: 1; overflow-y: auto; }
         .tab-content.active { display: flex; flex-direction: column; }
-        
+
         .canvas-container { width: 100%; aspect-ratio: 1/1; background: #000; border: 1px solid #333; position: relative; margin: 10px 0; display: flex; justify-content: center; align-items: center; border-radius: 8px; transition: all 0.3s; overflow: hidden; }
         .canvas-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; border-radius: 0; border: none; margin: 0; background: #0a0a0a; }
-        
+
         canvas { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; z-index: 2; cursor: crosshair; }
         canvas.mode-select { cursor: default; }
         .bg-img { position: absolute; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; object-fit: contain; opacity: 0.4; pointer-events: none; z-index: 1; }
-        
+
         .max-btn { position: absolute; top: 15px; background: rgba(0,0,0,0.8); color: #ccc; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; cursor: pointer; z-index: 15; font-size: 14px; font-weight: bold; transition: 0.2s; }
         .max-btn:hover { background: #deff9a; color: #000; }
 
-        .top-floating-tools { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 15; }
-        .bottom-floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 15; }
-        
-        .btn { background: #deff9a; color: #000; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .top-floating-tools { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; z-index: 15; }
+        .bottom-floating-tools { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 1px solid #333; z-index: 15; }
+
+        .btn { background: #deff9a; color: #000; border: none; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 10px; transition: 0.2s; }
         .btn:hover { background: #c8f582; }
         .btn-sec { background: #333; color: #ccc; }
         .btn-sec:hover { background: #444; color: #fff; }
-        
+
         .mode-switch { display: flex; background: rgba(0,0,0,0.9); border-radius: 6px; overflow: hidden; border: 1px solid #444; width: fit-content; }
-        .mode-switch label { padding: 8px 12px; cursor: pointer; font-size: 12px; color: #aaa; border-right: 1px solid #444; }
+        .mode-switch label { padding: 5px 8px; cursor: pointer; font-size: 10px; color: #aaa; border-right: 1px solid #444; }
         .mode-switch label:last-child { border-right: none; }
         .mode-switch input[type="radio"] { display: none; }
         .mode-switch input[type="radio"]:checked + label { background: #deff9a; color: #000; font-weight: bold; }
-        
-        .param-box { background: rgba(0,0,0,0.9); padding: 8px 12px; border: 1px solid #444; border-radius: 6px; display: flex; gap: 8px; align-items: center; font-size: 12px; color: #ccc; }
+
+        .param-box { background: rgba(0,0,0,0.9); padding: 5px 8px; border: 1px solid #444; border-radius: 6px; display: flex; gap: 5px; align-items: center; font-size: 10px; color: #ccc; }
         .param-box input { width: 45px; background: #222; color: #deff9a; border: 1px solid #555; text-align: center; border-radius: 4px; padding: 4px; outline:none; }
-        
+
         .action-bar { padding: 20px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
         .depth-input { background:#000; color:#deff9a; border:1px solid #444; padding:6px; border-radius: 4px; outline: none; }
-        
+
         /* === 中间 3D 视窗 === */
         #center-viewport { flex: 1 1 auto; position: relative; background: #0d0d0d; display: flex; flex-direction: column; }
         #loading { position: absolute; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; font-weight:bold; color: #deff9a; font-size: 20px; }
-        
-        #toggle-panel-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); background: #222; color: #deff9a; border: 1px solid #444; border-left: none; padding: 20px 5px; cursor: pointer; z-index: 1000; border-radius: 0 8px 8px 0; font-size: 12px; text-align: center; box-shadow: 2px 0 10px rgba(0,0,0,0.5); transition: 0.2s; }
+
+        #toggle-panel-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); background: #222; color: #deff9a; border: 1px solid #444; border-left: none; padding: 20px 5px; cursor: pointer; z-index: 1000; border-radius: 0 8px 8px 0; font-size: 10px; text-align: center; box-shadow: 2px 0 10px rgba(0,0,0,0.5); transition: 0.2s; }
         #toggle-panel-btn:hover { background: #444; color: #fff; }
 
-        #viewport-hints { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #333; border-radius: 20px; padding: 8px 20px; color: #888; font-size: 12px; z-index: 10; pointer-events: none; }
+        #viewport-hints { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #333; border-radius: 20px; padding: 8px 20px; color: #888; font-size: 10px; z-index: 10; pointer-events: none; }
         #viewport-hints span { color: #deff9a; font-weight: bold; margin: 0 5px; }
 
         #viewport { flex-grow: 1; width: 100%; height: 100%; }
 
         /* 3D 导航控制器 (ISO Cube) */
         #view-cube { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 8px; border: 1px solid #333; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        #view-cube button { background: #222; color: #ccc; border: 1px solid #444; padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; font-weight: bold; }
+        #view-cube button { background: #222; color: #ccc; border: 1px solid #444; padding: 6px 12px; font-size: 10px; cursor: pointer; border-radius: 4px; transition: 0.2s; font-weight: bold; }
         #view-cube button:hover { background: #deff9a; color: #000; }
 
         /* === 右侧固定装配控制面板 === */
-        #right-panel { flex: 0 0 340px; width: 340px; background: #151515; border-left: 1px solid #333; display: none; flex-direction: column; z-index: 20; box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
-        
+        #right-panel { flex: 0 0 340px; width: 340px; background: #151515; border-left: 1px solid #333; display: none; flex-direction: column; position: relative; z-index: 20; box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
+
         .outliner-header { padding: 15px; background: #222; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
         .outliner-header .title { font-weight: bold; font-size: 14px; color: #deff9a; }
         .history-btns button { background: #444; border: 1px solid #555; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 14px; cursor: pointer; transition: 0.2s; }
         .history-btns button:hover:not(:disabled) { background: #deff9a; color: #000; }
         .history-btns button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .outliner-list { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #111; }
-        .outliner-item { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 10px 12px; border-radius: 6px; border: 1px solid #333; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .outliner-list { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 5px; background: #111; }
+        .outliner-item { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 6px 8px; border-radius: 6px; border: 1px solid #333; font-size: 11px; cursor: pointer; transition: 0.2s; }
         .outliner-item:hover { border-color: #555; }
         .outliner-item.active { border-color: #deff9a; background: rgba(222,255,154,0.1); }
         .outliner-item input[type="checkbox"] { margin-right: 12px; cursor: pointer; width: 16px; height: 16px; }
         .item-name { flex-grow: 1; font-weight: bold; }
 
-        #dimension-section { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; font-family: monospace; color: #deff9a; font-size: 13px; display: none; flex-direction: column; }
+        #dimension-section { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; font-family: monospace; color: #deff9a; font-size: 11px; display: none; flex-direction: column; }
         .dim-row { display: flex; justify-content: space-between; margin-top: 8px; }
         .dim-row span.val { color: #fff; font-weight: bold; font-size: 14px; }
 
-        #precision-transform { padding: 15px; background: #111; border-top: 1px solid #333; display: none; flex-direction: column; gap: 8px; }
+        #precision-transform { padding: 15px; background: #111; border-top: 1px solid #333; display: none; flex-direction: column; gap: 5px; }
         .tool-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
-        
-        .transform-tools { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        .transform-tools button { flex: 1; padding: 10px 5px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; white-space: nowrap; }
+
+        .transform-tools { padding: 15px; background: #1a1a1a; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 6px; }
+        .transform-tools button { flex: 1; padding: 10px 5px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 10px; transition: 0.2s; white-space: nowrap; }
         .transform-tools button.active { background: #deff9a; color: #000; font-weight: bold; }
         .transform-tools button:hover:not(.active) { background: #444; }
-        
-        .boolean-tools { padding: 15px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        .boolean-row { display: flex; gap: 8px; }
+
+        .boolean-tools { padding: 15px; background: #111; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 6px; }
+        .boolean-row { display: flex; gap: 5px; }
         .boolean-row button { flex: 1; padding: 12px 5px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
         .boolean-row button:hover { background: #555; }
         .boolean-row button.b-union { border-left: 3px solid #4CAF50; }
         .boolean-row button.b-sub { border-left: 3px solid #F44336; }
         .boolean-row button.b-int { border-left: 3px solid #2196F3; }
+
+        /* === 右侧面板收起/展开按钮 === */
+        #right-panel-toggle {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #222;
+            color: #deff9a;
+            border: 1px solid #444;
+            padding: 20px 5px;
+            cursor: pointer;
+            z-index: 1000;
+            font-size: 10px;
+            text-align: center;
+            line-height: 1.4;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+            transition: 0.2s;
+            display: none; /* 默认隐藏，有实体时才显示 */
+        }
+        
+        #right-panel-toggle:hover {
+            background: #444;
+            color: #fff;
+        }
+        
+        /* 面板展开时，按钮在面板左侧 */
+        #right-panel-toggle.visible {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        
+
+        /* === 右侧面板收起状态 === */
+        #right-panel.collapsed {
+            margin-right: -340px;
+            overflow: hidden;
+        }
+        #right-panel.collapsed #right-panel-toggle {
+            right: 0;
+            left: auto;
+            border-radius: 8px 0 0 8px;
+            border-right: none;
+            border-left: 1px solid #444;
+        }
+
+        /* === 视口缩放按钮 === */
+        .zoom-to-fit-btn {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            z-index: 100;
+            background: #222;
+            color: #deff9a;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .zoom-to-fit-btn:hover {
+            background: #deff9a;
+            color: #000;
+        }
+
+        /* === 右侧面板折叠按钮 === */
+        #right-panel.collapsed {
+            margin-right: -340px;
+        }
+        .right-panel-toggle {
+            position: absolute;
+            top: 50%;
+            left: -30px;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 60px;
+            background: #222;
+            color: #deff9a;
+            border: 1px solid #333;
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 21;
+        }
+        .right-panel-toggle:hover {
+            background: #deff9a;
+            color: #000;
+        }
+        #right-panel:not(.collapsed) .right-panel-toggle::after {
+            content: '◀';
+        }
+        #right-panel.collapsed .right-panel-toggle::after {
+            content: '▶';
+        }
+        #right-panel:not(.collapsed) .right-panel-toggle {
+            display: flex;
+        }
+
+
+        /* 右侧面板折叠按钮 - 始终可见 */
+        .right-panel-toggle.always-visible {
+            display: flex !important;
+        }
+
+        /* 全局图和轴测图按钮样式 */
+        #view-cube button[onclick="zoomToFit()"],
+        #view-cube button[onclick*="setCameraView('iso')"] {
+            padding: 5px 8px;
+            font-size: 12px;
+        }
+
     </style>
     <script type="importmap">
         {
@@ -112,23 +229,24 @@
             }
         }
     </script>
-</head>
+    </head>
 <body>
     <div id="left-panel">
-        <div class="panel-header">
+        <div class="panel-header" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <h3 style="margin:0; font-size:16px; color:#deff9a">APEX CAD 2D草图</h3>
-            <a href="index.html" style="color:#666; text-decoration:none; font-size:12px">← BACK</a>
+            <button onclick="openProjectFromFile()" style="padding:3px 10px; background:#333; color:#fff; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:10px;">&#128194; 打开</button>
+            <a href="index.html" style="color:#666; text-decoration:none; font-size: 10px">← BACK</a>
         </div>
-        
+
         <div class="top-settings">
-            <div style="font-size:12px; color:#aaa; margin-bottom: 5px;"><i style="color:#deff9a">●</i> 1. 选择空间生成策略:</div>
+            <div style="font-size: 10px; color:#aaa; margin-bottom: 5px;"><i style="color:#deff9a">●</i> 1. 选择空间生成策略:</div>
             <select id="gen-strategy" onchange="toggleRevolveOptions()">
                 <option value="intersect">三轴布尔交集 (需绘制三视图)</option>
                 <option value="extrude">平面单向拉伸 (仅激活视图)</option>
                 <option value="revolve">单轴中心旋转 (仅激活视图)</option>
                 <option value="sweep" style="color: #ff9900; font-weight: bold;">沿路径扫掠 (主视画截面, 侧视画路径)</option>
             </select>
-            <div id="revolve-axis-container" style="display:none; justify-content:space-between; align-items:center; font-size:12px; color:#aaa; margin-top: 5px;">
+            <div id="revolve-axis-container" style="display:none; justify-content:space-between; align-items:center; font-size: 10px; color:#aaa; margin-top: 5px;">
                 <span>旋转轴:</span>
                 <div class="mode-switch">
                     <input type="radio" name="r-axis" id="ra-x" value="X"><label for="ra-x">X 轴</label>
@@ -143,67 +261,131 @@
             <div class="tab" onclick="switchTab('top')">俯视 (XZ)</div>
             <div class="tab" onclick="switchTab('side')">侧视 (YZ)</div>
         </div>
-        
-        <script>
-            const views = ['front', 'top', 'side'];
-            views.forEach((v, i) => {
-                document.write(`
-                <div id="tab-${v}" class="tab-content ${i===0?'active':''}">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                        <button class="btn btn-sec" onclick="document.getElementById('up-${v}').click()">📁 导入底图</button>
-                        <input type="file" id="up-${v}" hidden onchange="loadImg(event, '${v}')">
-                    </div>
-                    <div class="canvas-container" id="container-${v}">
-                        
-                        <div id="zoom-wrap-${v}" style="position:absolute; top:0; left:0; width:100%; height:100%; transform-origin: 0 0; will-change: transform;">
-                            <img id="img-${v}" class="bg-img">
-                            <canvas id="cv-${v}" class="mode-select" width="1000" height="1000"></canvas>
-                        </div>
-                        
-                        <button class="max-btn" onclick="toggleMax('${v}')" title="全屏/退出全屏" style="right: 15px;">⛶</button>
-                        <button class="max-btn" onclick="resetCanvasZoom('${v}')" title="恢复 1:1 默认缩放" style="right: 60px;">1:1</button>
 
-                        <div class="top-floating-tools">
-                            <div class="mode-switch">
-                                <input type="radio" name="m-${v}" id="ms-${v}" value="select" checked onchange="setMode('${v}', 'select')"><label for="ms-${v}">↖ 选择</label>
-                                <input type="radio" name="m-${v}" id="ml-${v}" value="line" onchange="setMode('${v}', 'line')"><label for="ml-${v}">线段</label>
-                                <input type="radio" name="m-${v}" id="ma-${v}" value="arc" onchange="setMode('${v}', 'arc')"><label for="ma-${v}">弧线</label>
-                                <input type="radio" name="m-${v}" id="mr-${v}" value="rect" onchange="setMode('${v}', 'rect')"><label for="mr-${v}">方形</label>
-                                <input type="radio" name="m-${v}" id="mc-${v}" value="circle" onchange="setMode('${v}', 'circle')"><label for="mc-${v}">圆形</label>
-                            </div>
-                            <div id="p-rect-${v}" class="param-box" style="display:none">
-                                W: <input type="number" id="rw-${v}" value="200" oninput="updateEntityParam('${v}')"> H: <input type="number" id="rh-${v}" value="200" oninput="updateEntityParam('${v}')">
-                            </div>
-                            <div id="p-circle-${v}" class="param-box" style="display:none">
-                                Rx(宽半): <input type="number" id="crx-${v}" value="150" oninput="updateEntityParam('${v}')">
-                                Ry(高半): <input type="number" id="cry-${v}" value="150" oninput="updateEntityParam('${v}')">
-                            </div>
-                        </div>
-                        
-                        <div class="bottom-floating-tools">
-                            <button class="btn btn-sec" onclick="undoPath('${v}')" id="btn-undo-${v}" style="display:none">↶ 撤销描点</button>
-                            <button class="btn btn-sec" onclick="closePath('${v}')" id="btn-close-${v}" style="display:none; color:#deff9a;">✓ 闭合为实体</button>
-                            <button class="btn btn-sec" onclick="deleteSelected('${v}')" id="btn-del-${v}">🗑 删除 (Del)</button>
-                            <button class="btn btn-sec" onclick="clearAll('${v}')">清空</button>
-                        </div>
+        <div id="tab-front" class="tab-content active">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                <button class="btn btn-sec" onclick="document.getElementById('up-front').click()">&#128194; 导入底图</button>
+                <input type="file" id="up-front" hidden onchange="loadImg(event, 'front')">
+            </div>
+            <div class="canvas-container" id="container-front">
+                <div id="zoom-wrap-front" style="position:absolute; top:0; left:0; width:100%; height:100%; transform-origin: 0 0; will-change: transform;">
+                    <img id="img-front" class="bg-img">
+                    <canvas id="cv-front" class="mode-select" width="1000" height="1000"></canvas>
+                </div>
+                <button class="max-btn" onclick="toggleMax('front')" title="Max" style="right: 15px;">⬟</button>
+                <button class="max-btn" onclick="resetCanvasZoom('front')" title="Reset" style="right: 60px;">1:1</button>
+                <div class="top-floating-tools">
+                    <div class="mode-switch">
+                        <input type="radio" name="m-front" id="ms-front" value="select" checked onchange="setMode('front', 'select')"><label for="ms-front">↖ 选择</label>
+                        <input type="radio" name="m-front" id="ml-front" value="line" onchange="setMode('front', 'line')"><label for="ml-front">线段</label>
+                        <input type="radio" name="m-front" id="ma-front" value="arc" onchange="setMode('front', 'arc')"><label for="ma-front">弧线</label>
+                        <input type="radio" name="m-front" id="mr-front" value="rect" onchange="setMode('front', 'rect')"><label for="mr-front">方形</label>
+                        <input type="radio" name="m-front" id="mc-front" value="circle" onchange="setMode('front', 'circle')"><label for="mc-front">圆形</label>
+                    </div>
+                    <div id="p-rect-front" class="param-box" style="display:none">
+                        W(宽): <input type="number" id="rw-front" value="30" oninput="updateEntityParam('front')"> H(高): <input type="number" id="rh-front" value="30" oninput="updateEntityParam('front')">
+                    </div>
+                    <div id="p-circle-front" class="param-box" style="display:none">
+                        Rx(宽半): <input type="number" id="crx-front" value="30" oninput="updateEntityParam('front')">
+                        Ry(高半): <input type="number" id="cry-front" value="30" oninput="updateEntityParam('front')">
                     </div>
                 </div>
-                `);
-            });
-        </script>
+                <div class="bottom-floating-tools">
+                    <button class="btn btn-sec" onclick="undoPath('front')" id="btn-undo-front" style="display:none">↶ 撤销描点</button>
+                    <button class="btn btn-sec" onclick="closePath('front')" id="btn-close-front" style="display:none; color:#deff9a;">✓ 闭合为实体</button>
+                    <button class="btn btn-sec" onclick="deleteSelected('front')" id="btn-del-front">✕ 删除 (Del)</button>
+                    <button class="btn btn-sec" onclick="clearAll('front')">清空</button>
+                </div>
+            </div>
+        </div>
+        <div id="tab-top" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                <button class="btn btn-sec" onclick="document.getElementById('up-top').click()">&#128194; 导入底图</button>
+                <input type="file" id="up-top" hidden onchange="loadImg(event, 'top')">
+            </div>
+            <div class="canvas-container" id="container-top">
+                <div id="zoom-wrap-top" style="position:absolute; top:0; left:0; width:100%; height:100%; transform-origin: 0 0; will-change: transform;">
+                    <img id="img-top" class="bg-img">
+                    <canvas id="cv-top" class="mode-select" width="1000" height="1000"></canvas>
+                </div>
+                <button class="max-btn" onclick="toggleMax('top')" title="Max" style="right: 15px;">⬟</button>
+                <button class="max-btn" onclick="resetCanvasZoom('top')" title="Reset" style="right: 60px;">1:1</button>
+                <div class="top-floating-tools">
+                    <div class="mode-switch">
+                        <input type="radio" name="m-top" id="ms-top" value="select" checked onchange="setMode('top', 'select')"><label for="ms-top">↖ 选择</label>
+                        <input type="radio" name="m-top" id="ml-top" value="line" onchange="setMode('top', 'line')"><label for="ml-top">线段</label>
+                        <input type="radio" name="m-top" id="ma-top" value="arc" onchange="setMode('top', 'arc')"><label for="ma-top">弧线</label>
+                        <input type="radio" name="m-top" id="mr-top" value="rect" onchange="setMode('top', 'rect')"><label for="mr-top">方形</label>
+                        <input type="radio" name="m-top" id="mc-top" value="circle" onchange="setMode('top', 'circle')"><label for="mc-top">圆形</label>
+                    </div>
+                    <div id="p-rect-top" class="param-box" style="display:none">
+                        W(宽): <input type="number" id="rw-top" value="30" oninput="updateEntityParam('top')"> H(高): <input type="number" id="rh-top" value="30" oninput="updateEntityParam('top')">
+                    </div>
+                    <div id="p-circle-top" class="param-box" style="display:none">
+                        Rx(宽半): <input type="number" id="crx-top" value="30" oninput="updateEntityParam('top')">
+                        Ry(高半): <input type="number" id="cry-top" value="30" oninput="updateEntityParam('top')">
+                    </div>
+                </div>
+                <div class="bottom-floating-tools">
+                    <button class="btn btn-sec" onclick="undoPath('top')" id="btn-undo-top" style="display:none">↶ 撤销描点</button>
+                    <button class="btn btn-sec" onclick="closePath('top')" id="btn-close-top" style="display:none; color:#deff9a;">✓ 闭合为实体</button>
+                    <button class="btn btn-sec" onclick="deleteSelected('top')" id="btn-del-top">✕ 删除 (Del)</button>
+                    <button class="btn btn-sec" onclick="clearAll('top')">清空</button>
+                </div>
+            </div>
+        </div>
+        <div id="tab-side" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                <button class="btn btn-sec" onclick="document.getElementById('up-side').click()">&#128194; 导入底图</button>
+                <input type="file" id="up-side" hidden onchange="loadImg(event, 'side')">
+            </div>
+            <div class="canvas-container" id="container-side">
+                <div id="zoom-wrap-side" style="position:absolute; top:0; left:0; width:100%; height:100%; transform-origin: 0 0; will-change: transform;">
+                    <img id="img-side" class="bg-img">
+                    <canvas id="cv-side" class="mode-select" width="1000" height="1000"></canvas>
+                </div>
+                <button class="max-btn" onclick="toggleMax('side')" title="Max" style="right: 15px;">⬟</button>
+                <button class="max-btn" onclick="resetCanvasZoom('side')" title="Reset" style="right: 60px;">1:1</button>
+                <div class="top-floating-tools">
+                    <div class="mode-switch">
+                        <input type="radio" name="m-side" id="ms-side" value="select" checked onchange="setMode('side', 'select')"><label for="ms-side">↖ 选择</label>
+                        <input type="radio" name="m-side" id="ml-side" value="line" onchange="setMode('side', 'line')"><label for="ml-side">线段</label>
+                        <input type="radio" name="m-side" id="ma-side" value="arc" onchange="setMode('side', 'arc')"><label for="ma-side">弧线</label>
+                        <input type="radio" name="m-side" id="mr-side" value="rect" onchange="setMode('side', 'rect')"><label for="mr-side">方形</label>
+                        <input type="radio" name="m-side" id="mc-side" value="circle" onchange="setMode('side', 'circle')"><label for="mc-side">圆形</label>
+                    </div>
+                    <div id="p-rect-side" class="param-box" style="display:none">
+                        W(宽): <input type="number" id="rw-side" value="30" oninput="updateEntityParam('side')"> H(高): <input type="number" id="rh-side" value="30" oninput="updateEntityParam('side')">
+                    </div>
+                    <div id="p-circle-side" class="param-box" style="display:none">
+                        Rx(宽半): <input type="number" id="crx-side" value="30" oninput="updateEntityParam('side')">
+                        Ry(高半): <input type="number" id="cry-side" value="30" oninput="updateEntityParam('side')">
+                    </div>
+                </div>
+                <div class="bottom-floating-tools">
+                    <button class="btn btn-sec" onclick="undoPath('side')" id="btn-undo-side" style="display:none">↶ 撤销描点</button>
+                    <button class="btn btn-sec" onclick="closePath('side')" id="btn-close-side" style="display:none; color:#deff9a;">✓ 闭合为实体</button>
+                    <button class="btn btn-sec" onclick="deleteSelected('side')" id="btn-del-side">✕ 删除 (Del)</button>
+                    <button class="btn btn-sec" onclick="clearAll('side')">清空</button>
+                </div>
+            </div>
+        </div>
 
         <div class="action-bar">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#aaa">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size: 10px; color:#aaa">
                 <span><i style="color:#deff9a">●</i> 2. 设定生成深度:</span>
                 <input type="number" id="depth" class="depth-input" value="200" style="width:70px;">
             </div>
             <button class="btn" style="padding:15px; font-size:14px; margin-top:5px;" onclick="runBuild()">➕ 实例化实体至 3D 场景</button>
         </div>
     </div>
-    
+
     <div id="center-viewport">
         <div id="view-cube">
-            <button onclick="setCameraView('iso')" style="color:#deff9a;">[ ISO ] 等轴测</button>
+            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <button onclick="zoomToFit()" style="flex:1; font-size:12px;">全局图</button>
+                <button onclick="setCameraView('iso')" style="flex:1; color:#deff9a; font-size:12px;">轴测图</button>
+            </div>
             <div style="display:flex; gap:5px;">
                 <button onclick="setCameraView('top')" style="flex:1">俯视</button>
                 <button onclick="setCameraView('front')" style="flex:1">主视</button>
@@ -214,95 +396,143 @@
         <div id="toggle-panel-btn" onclick="toggleLeftPanel()" title="收起/展开绘图板">◀<br>收<br>起</div>
         <div id="loading">COMPUTING...</div>
         <div id="viewport-hints"><span>左键</span>旋转观察 | <span>右键</span>平移视口 | <span>滚轮</span>缩放</div>
-        <div id="viewport"></div>
+        <div id="viewport">
+
+    </div>
     </div>
 
     <div id="right-panel">
             <div class="outliner-header">
                 <span class="title">3D 装配与工程管理器</span>
                 <div class="history-btns">
-                    <button onclick="saveProjectToLocal()" title="保存当前工程到本地">💾 存盘</button>
-                    <button id="btn-undo" onclick="undo3D()">↶</button>
-                    <button id="btn-redo" onclick="redo3D()">↷</button>
+                    <button onclick="saveProjectToFile()">&#128190; 存盘</button>
+                    <button id="btn-undo" onclick="undo3D()" disabled>↶</button>
+                    <button id="btn-redo" onclick="redo3D()" disabled>↷</button>
                 </div>
             </div>
-            
-            <details open style="border-bottom: 1px solid #333;">
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">📂 本地工程快照历史</summary>
+
+            <details style="border-bottom: 1px solid #333;">
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 10px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">📂 快照历史</summary>
                 <div id="local-projects" style="background:#111; padding:10px; max-height:160px; overflow-y:auto;">
                     <div id="project-list-container"></div>
                 </div>
             </details>
-        
-            <details open style="flex-grow: 1; display: flex; flex-direction: column; border-bottom: 1px solid #333;">
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">🧱 3D 场景零件清单 (Outliner)</summary>
-                <div class="outliner-list" id="outliner-list" style="max-height: 250px; overflow-y: auto; padding: 5px 10px;"></div>
+
+            <details open style="flex: 1 1 0; display: flex; flex-direction: column; min-height: 0; border-bottom: 1px solid #333;">
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 10px; font-weight: bold; color: #deff9a; cursor: pointer; outline: none; user-select: none;">🧱 零件清单</summary>
+                <div class="outliner-list" id="outliner-list" style="flex: 1; overflow-y: auto; padding: 5px 10px; min-height: 60px;"></div>
             </details>
-        
+
             <details style="border-bottom: 1px solid #333;">
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">📐 物理边界测量 (Bounding Box)</summary>
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 10px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">📐 测量</summary>
                 <div id="dimension-section" style="display: flex; padding: 10px 15px; background: #111;">
                     <div class="dim-row" style="width: 100%; display: flex; justify-content: space-between; font-size: 11px;">
                         <span>宽(X): <span class="val" id="dim-w" style="color:#deff9a;">0.0</span></span>
                         <span>高(Y): <span class="val" id="dim-h" style="color:#deff9a;">0.0</span></span>
                         <span>深(Z): <span class="val" id="dim-d" style="color:#deff9a;">0.0</span></span>
                     </div>
+                </div><div id="precision-transform" style="display:none;"></div>
+            </details>
+
+            <details style="border-bottom: 1px solid #333;">
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 10px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">&#128295; 参数编辑</summary>
+                <div style="background: #151515; padding: 8px 10px; display:flex; gap:8px; align-items:flex-start;">
+                    <!-- Left: tab buttons (vertical stack) -->
+                    <div style="display:flex; flex-direction:column; gap:4px; min-width:52px;">
+                        <button id="tab-move" onclick="showParamTab('move')" style="padding:7px 6px; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px; text-align:center;">&#8594; 移动</button>
+                        <button id="tab-rotate" onclick="showParamTab('rotate')" style="padding:7px 6px; background:#333; color:#aaa; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px; text-align:center;">&#8635; 旋转</button>
+                        <button id="tab-scale" onclick="showParamTab('scale')" style="padding:7px 6px; background:#333; color:#aaa; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px; text-align:center;">&#8644; 缩放</button>
+                        <button id="tab-copy" onclick="showParamTab('copy')" style="padding:7px 6px; background:#333; color:#aaa; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px; text-align:center;">&#128203; 复制</button>
+                        <button id="tab-align" onclick="showParamTab('align')" style="padding:7px 6px; background:#333; color:#aaa; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px; text-align:center;">&#10067; 对齐</button>
+                    </div>
+                    <!-- Right: tab content panels -->
+                    <div style="flex:1; display:flex; flex-direction:column; gap:6px; min-width:0;">
+                        <!-- Move panel -->
+                        <div id="panel-move" style="display:flex; flex-direction:column; gap:4px;">
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <button onclick="setTransformMode('translate')" style="padding:5px 8px; background:#444; color:#fff; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:10px;">&#8594; 唤出移动轴</button>
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">X:</span>
+                                <input id="mv-x" type="number" value="0" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">Y:</span>
+                                <input id="mv-y" type="number" value="0" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">Z:</span>
+                                <input id="mv-z" type="number" value="0" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <button onclick="applyMoveXYZ()" style="padding:4px 8px; background:#555; color:#fff; border:1px solid #666; border-radius:4px; cursor:pointer; font-size:10px;">&#10003;</button>
+                            </div>
+                        </div>
+                        <!-- Rotate panel -->
+                        <div id="panel-rotate" style="display:none; flex-direction:column; gap:4px;">
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <button onclick="setTransformMode('rotate')" style="padding:5px 8px; background:#444; color:#fff; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:10px;">&#8635; 唤出旋转球</button>
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">X:</span>
+                                <input id="rt-x" type="number" value="90" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">Y:</span>
+                                <input id="rt-y" type="number" value="90" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">Z:</span>
+                                <input id="rt-z" type="number" value="90" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <button onclick="applyRotateXYZ()" style="padding:4px 8px; background:#555; color:#fff; border:1px solid #666; border-radius:4px; cursor:pointer; font-size:10px;">&#10003;</button>
+                            </div>
+                        </div>
+                        <!-- Scale panel -->
+                        <div id="panel-scale" style="display:none; flex-direction:column; gap:4px;">
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <button onclick="setTransformMode('scale')" style="padding:5px 8px; background:#444; color:#fff; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:10px;">&#8644; 唤出缩放框</button>
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">X:</span>
+                                <input id="sc-x" type="number" value="50" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">Y:</span>
+                                <input id="sc-y" type="number" value="50" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <span style="font-size:10px; color:#888; min-width:12px;">Z:</span>
+                                <input id="sc-z" type="number" value="50" step="1" style="width:60px; padding:4px 5px; background:#222; color:#deff9a; border:1px solid #444; border-radius:3px; font-size:10px; text-align:center;">
+                                <button onclick="applyScaleXYZ()" style="padding:4px 8px; background:#555; color:#fff; border:1px solid #666; border-radius:4px; cursor:pointer; font-size:10px;">&#10003;</button>
+                            </div>
+                        </div>
+                        <!-- Copy panel -->
+                        <div id="panel-copy" style="display:none; flex-direction:column; gap:4px;">
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <button onclick="doCloneForCopy()" style="padding:5px 8px; background:#444; color:#fff; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:10px;">&#128203; 复制</button>
+                            </div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                <button onclick="mirrorSelectedEntity('yz')" style="padding:4px 8px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">&#8646; 左右镜像</button>
+                                <button onclick="mirrorSelectedEntity('xz')" style="padding:4px 8px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">&#8597; 上下镜像</button>
+                                <button onclick="mirrorSelectedEntity('xy')" style="padding:4px 8px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">&#8760; 前后镜像</button>
+                            </div>
+                        </div>
+                        <!-- Align panel -->
+                        <div id="panel-align" style="display:none; flex-direction:column; gap:4px;">
+                            <div style="font-size:10px; color:#888; margin-bottom:2px;">提示: 请先在右侧列表勾选2个以上实体(第一个为主体)</div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                <button onclick="alignEntities('x','center')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">X居中</button>
+                                <button onclick="alignEntities('y','center')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">Y居中</button>
+                                <button onclick="alignEntities('z','center')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">Z居中</button>
+                            </div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                <button onclick="alignEntities('y','top')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">顶对齐</button>
+                                <button onclick="alignEntities('x','left')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">左对齐</button>
+                                <button onclick="alignEntities('x','right')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">右对齐</button>
+                                <button onclick="alignEntities('y','bottom')" style="padding:4px 7px; background:#333; color:#fff; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:10px;">底对齐</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </details>
-        
-            <details open>
-                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 12px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">⚙️ 二次加工与特征装配区</summary>
-                <div style="background: #151515;">
-                    
-                    <div id="precision-transform" style="border-bottom: 1px solid #222; padding: 10px 15px;">
-                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">精确步进旋转:</div>
-                        <div class="tool-row">
-                            <button class="btn-sec" onclick="rotateSelected('x', 90)">+90° X</button>
-                            <button class="btn-sec" onclick="rotateSelected('y', 90)">+90° Y</button>
-                            <button class="btn-sec" onclick="rotateSelected('z', 90)">+90° Z</button>
-                        </div>
-                        <div class="tool-row" style="margin-top:6px;">
-                            <input type="number" id="custom-deg" value="45" style="width:50px; background:#222; color:#deff9a; border:1px solid #555; text-align:center; padding:4px; border-radius:4px; outline:none; font-size:12px;">
-                            <span style="font-size:11px; color:#888; margin-left:4px; margin-right:8px;">度</span>
-                            <button class="btn-sec" onclick="rotateSelected('x', null)">轴 X</button>
-                            <button class="btn-sec" onclick="rotateSelected('y', null)">轴 Y</button>
-                            <button class="btn-sec" onclick="rotateSelected('z', null)">轴 Z</button>
-                        </div>
-                    </div>
-        
-                    <div class="transform-tools" style="border-bottom: 1px solid #222; padding: 10px 15px;">
-                        <div style="font-size:11px; color:#aaa; margin-bottom:5px;">操控模式切换:</div>
-                        <div class="tool-row">
-                            <button id="t-translate" class="active" onclick="setTransformMode('translate')">移动轴</button>
-                            <button id="t-rotate" onclick="setTransformMode('rotate')">旋转球</button>
-                            <button id="t-scale" onclick="setTransformMode('scale')">缩放框</button>
-                        </div>
-                        
-                        <div style="font-size:11px; color:#aaa; margin-top:10px; margin-bottom:4px;">对称镜像复制 (针对当前蓝色高亮项):</div>
-                        <div class="tool-row">
-                            <button onclick="cloneSelectedPart()" title="原地克隆副本">📄 复制</button>
-                            <button onclick="mirrorSelectedEntity('yz')">左右(YZ)</button>
-                            <button onclick="mirrorSelectedEntity('xz')">上下(XZ)</button>
-                            <button onclick="mirrorSelectedEntity('xy')">前后(XY)</button>
-                        </div>
-                        
-                        <div style="font-size:11px; color:#aaa; margin-top:10px; margin-bottom:4px;">多实体基准对齐 (多选时以首项为基准面):</div>
-                        <div class="tool-row">
-                            <button onclick="alignEntities('x', 'center')">X 居中</button>
-                            <button onclick="alignEntities('z', 'center')">Z 居中</button>
-                            <button onclick="alignEntities('y', 'top')">Y 顶齐</button>
-                            <button onclick="alignEntities('y', 'bottom')">Y 底齐</button>
-                        </div>
-                    </div>
-        
-                    <div class="boolean-tools" style="padding: 10px 15px;">
+
+            <details>
+                <summary style="padding: 10px 15px; background: #1c1c1c; font-size: 10px; font-weight: bold; color: #aaa; cursor: pointer; outline: none; user-select: none;">🔩 特征装配</summary>
+                <div style="background: #151515; padding: 10px 15px;">
+                    <div class="boolean-tools">
                         <div style="font-size:11px; color:#aaa; margin-bottom:5px;">实体拓扑布尔操作 (勾选生效):</div>
                         <div class="boolean-row">
                             <button class="b-union" onclick="execBoolean('union')">并集 ∪</button>
                             <button class="b-sub" onclick="execBoolean('subtract')">差集 ➖</button>
                             <button class="b-int" onclick="execBoolean('intersect')">交集 ∩</button>
                         </div>
-                        
+
                         <div style="font-size:11px; color:#aaa; margin-top:12px; margin-bottom:5px;">高级曲面加工特征 (接口预留):</div>
                         <div class="tool-row">
                             <button onclick="advancedOpAlert('倒角 (Chamfer)')">📐 倒角</button>
@@ -310,44 +540,76 @@
                             <button onclick="advancedOpAlert('中空 (Shell)')">🔲 中空</button>
                             <button onclick="advancedOpAlert('表面雕刻 (Engrave)')">✒️ 雕刻</button>
                         </div>
-                        
-                        <button class="btn" style="width:100%; margin-top:14px; padding:10px; font-weight:bold;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
-                        <button style="width:100%; margin-top:6px; padding:6px; background:#441111; color:#ff8888; border:1px solid #662222; border-radius:4px; cursor:pointer; font-size:11px;" onclick="delete3DPart()">🗑 删除选中零件</button>
                     </div>
-        
                 </div>
             </details>
-        </div>
-    
-        <div class="boolean-tools">
-            <div style="font-size:11px; color:#aaa;">二次加工 (列表排上方的为主体，下方为刀具):</div>
-            <div class="boolean-row">
-                <button class="b-union" onclick="execBoolean('union')" title="可勾选多个实体">求和 ∪</button>
-                <button class="b-sub" onclick="execBoolean('subtract')">求差 ➖</button>
-                <button class="b-int" onclick="execBoolean('intersect')">求交 ∩</button>
+
+            <!-- 底部固定工具栏(仅在有3D实体时显示) -->
+            <div id="bottom-toolbar" style="position: sticky; bottom: 0; background: #111; padding: 10px 15px; border-top: 1px solid #333; display: flex; gap: 6px; z-index: 10;">
+                <button class="btn" style="flex: 1; padding: 10px; font-size: 12px;" onclick="exportSelectedSTL()">💾 导出 STL</button>
+                <button style="flex: 1; padding: 10px; font-size: 12px; background: #441111; color: #ff8888; border: 1px solid #662222; border-radius: 4px; cursor: pointer;" onclick="delete3DPart()">🗑 删除</button>
             </div>
-            <button class="btn" style="width:100%; margin-top:5px; padding:12px;" onclick="exportSelectedSTL()">💾 导出选中实体 (STL)</button>
-        </div>
+</div>
+
+
+
+
+
     </div>
 
     <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { TransformControls } from 'three/addons/controls/TransformControls.js';
-        import { STLExporter } from 'three/addons/exporters/STLExporter.js';
-        import { CSG } from 'three-csg-ts';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { CSG } from 'three-csg-ts';
+
+// 全局变量:存储主视图和侧视图的绘制路径
+let drawingPaths = { 'main': [], 'side': [] };
+
+// ================= 右侧面板收起/展开 =================
+        window.toggleRightPanel = () => {
+            const rp = document.getElementById('right-panel');
+            const btn = document.getElementById('right-panel-toggle');
+            rp.classList.toggle('collapsed');
+            const isCollapsed = rp.classList.contains('collapsed');
+            btn.innerHTML = isCollapsed ? '▶<br>展<br>开' : '◀<br>收<br>起';
+            btn.classList.toggle('collapsed', isCollapsed);
+
+            // 根据面板状态调整按钮位置
+            if (isCollapsed) {
+                btn.style.right = '0';  // 面板收起,按钮贴在屏幕右边缘
+            } else {
+                btn.style.right = '340px';  // 面板展开,按钮贴在面板左边缘
+            }
+
+            // Trigger resize for viewport adjustment
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        };
+
+
+        // 初始化右侧面板 toggle 按钮位置
+        window.addEventListener('DOMContentLoaded', () => {
+            const rp = document.getElementById('right-panel');
+            const btn = document.getElementById('right-panel-toggle');
+            if (rp && btn) {
+                const isCollapsed = rp.classList.contains('collapsed');
+                btn.style.right = isCollapsed ? '0' : '340px';
+                btn.innerHTML = isCollapsed ? '▶<br>展<br>开' : '◀<br>收<br>起';
+            }
+        });
 
         // ================= UI 布局交互 (智能防冲突隐藏) =================
-        // ================= 补丁 2：全屏彻底居中与 UI 净化 =================
-        window.toggleMax = (v) => { 
+        // ================= 补丁 2:全屏彻底居中与 UI 净化 =================
+        window.toggleMax = (v) => {
             const container = document.getElementById(`container-${v}`);
-            const isFull = container.classList.toggle('fullscreen'); 
-    
+            const isFull = container.classList.toggle('fullscreen');
+
             // 隐藏 3D 操作指南、快捷视角块和中间的收起/展开拨片
             document.getElementById('viewport-hints').style.display = isFull ? 'none' : 'block';
             document.getElementById('view-cube').style.display = isFull ? 'none' : 'flex';
             document.getElementById('toggle-panel-btn').style.display = isFull ? 'none' : 'block';
-    
+
             // 强制画布全屏时居中处理
             if(isFull) {
                 container.style.display = 'flex';
@@ -367,25 +629,25 @@
             const btn = document.getElementById('toggle-panel-btn');
             lp.classList.toggle('collapsed');
             btn.innerHTML = lp.classList.contains('collapsed') ? '▶<br>展<br>开' : '◀<br>收<br>起';
-            
+
             let steps = 0;
             const resizeInterval = setInterval(() => {
                 window.dispatchEvent(new Event('resize'));
-                if(++steps > 16) clearInterval(resizeInterval); 
+                if(++steps > 16) clearInterval(resizeInterval);
             }, 20);
         };
 
         window.advancedOpAlert = (name) => {
-            alert(`【${name}】功能接口已就绪。\n\n由于浏览器 WebGL 本地计算性能限制，复杂拓扑级特征（如倒角/雕刻）将接入云端网格引擎计算。敬请期待下一次更新！\n\n💡 替代方案：可在 2D 草图中直接绘制带圆角、中空的精确截面截面，然后进行空间拉伸。`);
+            alert(`【${name}】功能接口已就绪。\n\n由于浏览器 WebGL 本地计算性能限制,复杂拓扑级特征(如倒角/雕刻)将接入云端网格引擎计算。敬请期待下一次更新!\n\n💡 替代方案:可在 2D 草图中直接绘制带圆角、中空的精确截面截面,然后进行空间拉伸。`);
         };
 
         // ================= 2D 画布引擎 (Pan/Zoom 与 连续路径防清空) =================
         const views = ['front', 'top', 'side'];
-        const CV_SIZE = 1000; 
-        const data = { 
-            front: { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }, 
-            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }, 
-            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 } 
+        const CV_SIZE = 1000;
+        const data = {
+            front: { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 },
+            top:   { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 },
+            side:  { entities: [], currentPath: [], mode: 'select', selectedId: null, arcState: 0, tempArcEnd: null, panX: 0, panY: 0, zoom: 1 }
         };
         let entityIdCounter = 0;
 
@@ -401,44 +663,44 @@
             document.getElementById(`zoom-wrap-${v}`).style.transform = `translate(0px, 0px) scale(1)`;
         };
 
-        window.setMode = (v, mode) => { 
+        window.setMode = (v, mode) => {
             const wasDrawing = (data[v].mode === 'line' || data[v].mode === 'arc');
             const isDrawing = (mode === 'line' || mode === 'arc');
-            
-            data[v].mode = mode; 
-            data[v].selectedId = null; 
-            
-            // 核心修复：在画多边形时，任意切换“线段”与“弧线”，绝对不清除之前的进度！
+
+            data[v].mode = mode;
+            data[v].selectedId = null;
+
+            // 核心修复:在画多边形时,任意切换"线段"与"弧线",绝对不清除之前的进度!
             if (!(wasDrawing && isDrawing)) {
-                data[v].currentPath = []; 
-                data[v].arcState = 0; 
+                data[v].currentPath = [];
+                data[v].arcState = 0;
                 data[v].tempArcEnd = null;
             }
 
             const cv = document.getElementById(`cv-${v}`); cv.className = mode === 'select' ? 'mode-select' : '';
-            
+
             document.getElementById(`p-rect-${v}`).style.display = mode === 'rect' ? 'flex' : 'none';
             document.getElementById(`p-circle-${v}`).style.display = mode === 'circle' ? 'flex' : 'none';
-            
+
             document.getElementById(`btn-undo-${v}`).style.display = isDrawing ? 'inline-block' : 'none';
             document.getElementById(`btn-close-${v}`).style.display = isDrawing ? 'inline-block' : 'none';
             document.getElementById(`btn-del-${v}`).style.display = mode === 'select' ? 'inline-block' : 'none';
             renderCanvas(v);
         };
-        
+
         const renderCanvas = (v) => {
             const cv = document.getElementById(`cv-${v}`); const ctx = cv.getContext('2d');
             ctx.clearRect(0,0,CV_SIZE,CV_SIZE);
-            
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 1; ctx.beginPath(); 
+
+            ctx.strokeStyle = '#222'; ctx.lineWidth = 1; ctx.beginPath();
             for(let i=0; i<=CV_SIZE; i+=50){ ctx.moveTo(i,0);ctx.lineTo(i,CV_SIZE);ctx.moveTo(0,i);ctx.lineTo(CV_SIZE,i); } ctx.stroke();
             ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(CV_SIZE/2,0);ctx.lineTo(CV_SIZE/2,CV_SIZE);ctx.moveTo(0,CV_SIZE/2);ctx.lineTo(CV_SIZE,CV_SIZE/2); ctx.stroke();
 
             ctx.fillStyle = '#666'; ctx.font = '11px sans-serif';
             for(let i=0; i<=CV_SIZE; i+=100) {
                 if(i !== CV_SIZE/2) {
-                    ctx.fillText((i - CV_SIZE/2), i + 4, CV_SIZE/2 - 4); 
-                    ctx.fillText((CV_SIZE/2 - i), CV_SIZE/2 + 4, i - 4); 
+                    ctx.fillText((i - CV_SIZE/2), i + 4, CV_SIZE/2 - 4);
+                    ctx.fillText((CV_SIZE/2 - i), CV_SIZE/2 + 4, i - 4);
                 }
             }
 
@@ -491,10 +753,10 @@
 
         // 获取经过缩放矩阵还原后的鼠标实际坐标
         const getCanvasCoords = (v, e) => {
-            const cv = document.getElementById(`cv-${v}`); 
+            const cv = document.getElementById(`cv-${v}`);
             // getBoundingClientRect 能够自动包含 CSS 缩放产生的大小变化
-            const r = cv.getBoundingClientRect(); 
-            const scale = r.width / CV_SIZE; 
+            const r = cv.getBoundingClientRect();
+            const scale = r.width / CV_SIZE;
             return { cx: (e.clientX - r.left) / scale, cy: (e.clientY - r.top) / scale };
         };
 
@@ -514,8 +776,8 @@
             if(activePanView) { document.getElementById(`container-${activePanView}`).style.cursor = 'default'; activePanView = null; }
         });
 
-        // ================= 补丁 5：恢复 Ctrl+V 粘贴底图与按钮导入功能 =================
-        // 1. 恢复：点击“📁 导入底图”按钮的读取功能
+        // ================= 补丁 5:恢复 Ctrl+V 粘贴底图与按钮导入功能 =================
+        // 1. 恢复:点击"📁 导入底图"按钮的读取功能
         window.loadImg = (event, v) => {
             const file = event.target.files[0];
             if (file) {
@@ -526,15 +788,15 @@
                 reader.readAsDataURL(file);
             }
         };
-        
-        // 2. 增强：全局监听 Ctrl+V 直接粘贴剪贴板图片
+
+        // 2. 增强:全局监听 Ctrl+V 直接粘贴剪贴板图片
         window.addEventListener('paste', (e) => {
             // 识别当前激活的是哪个视图 (主视/俯视/侧视)
             const activeTab = document.querySelector('.tab-content.active');
             if (!activeTab) return;
             const v = activeTab.id.replace('tab-', '');
-            
-            // 遍历剪贴板内容，寻找图片
+
+            // 遍历剪贴板内容,寻找图片
             const items = e.clipboardData.items;
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
@@ -545,11 +807,11 @@
                         document.getElementById(`img-${v}`).src = event.target.result;
                     };
                     reader.readAsDataURL(blob);
-                    break; // 找到第一张图片就停止，防止粘贴多张导致卡顿
+                    break; // 找到第一张图片就停止,防止粘贴多张导致卡顿
                 }
             }
         });
-        
+
         views.forEach(v => {
             const container = document.getElementById(`container-${v}`);
             const wrap = document.getElementById(`zoom-wrap-${v}`);
@@ -567,11 +829,11 @@
                 data[v].panX = mx - (mx - data[v].panX) * zoomAmount;
                 data[v].panY = my - (my - data[v].panY) * zoomAmount;
                 data[v].zoom *= zoomAmount;
-                
+
                 // 限制缩放比例
                 if(data[v].zoom < 0.2) data[v].zoom = 0.2;
                 if(data[v].zoom > 10) data[v].zoom = 10;
-                
+
                 wrap.style.transform = `translate(${data[v].panX}px, ${data[v].panY}px) scale(${data[v].zoom})`;
             });
 
@@ -582,7 +844,7 @@
 
             // --- 画布鼠标按下 (区分绘制、拖拽和平移) ---
             container.addEventListener('mousedown', (e) => {
-                // 中键，或者非线段模式下的右键 -> 触发画布平移
+                // 中键,或者非线段模式下的右键 -> 触发画布平移
                 if (e.button === 1 || (e.button === 2 && data[v].mode !== 'line' && data[v].mode !== 'arc')) {
                     e.preventDefault();
                     activePanView = v;
@@ -591,25 +853,25 @@
                     container.style.cursor = 'grabbing';
                     return;
                 }
-                
-                // 如果不是左键且不是右键(绘图菜单)，退出
+
+                // 如果不是左键且不是右键(绘图菜单),退出
                 if(e.button !== 0 && e.button !== 2) return;
-                
-                // 如果按在浮动工具上，退出
+
+                // 如果按在浮动工具上,退出
                 if(e.target !== cv) return;
 
                 cv.focus();
                 let { cx, cy } = getCanvasCoords(v, e);
-                
+
                 if (e.button === 0) { // 左键逻辑
                     if (data[v].mode === 'select') {
                         const hitId = hitTest(v, cx, cy); data[v].selectedId = hitId;
-                        
+
                         if (hitId !== null) {
                             const ent = data[v].entities.find(en => en.id === hitId);
                             dragState = { ent, startX: cx, startY: cy, origCx: ent.cx, origCy: ent.cy };
-                            
-                            // 🌟 新增：检测是否点中了路径上的某个顶点
+
+                            // 🌟 新增:检测是否点中了路径上的某个顶点
                             if (ent.type === 'path') {
                                 dragState.origPts = ent.pts.map(p => ({ cx: p.cx, cy: p.cy }));
                                 const clickTolerance = 10 / data[v].zoom;
@@ -620,26 +882,26 @@
                                     }
                                 }
                             }
-                            
-                            if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; } 
+
+                            if(ent.type === 'rect') { document.getElementById(`p-rect-${v}`).style.display = 'flex'; document.getElementById(`rw-${v}`).value = ent.w; document.getElementById(`rh-${v}`).value = ent.h; }
                             else if(ent.type === 'circle') { document.getElementById(`p-circle-${v}`).style.display = 'flex'; document.getElementById(`cr-${v}`).value = ent.r; }
-                        } else { 
-                            document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none'; 
+                        } else {
+                            document.getElementById(`p-rect-${v}`).style.display = 'none'; document.getElementById(`p-circle-${v}`).style.display = 'none';
                         }
                         renderCanvas(v);
                     }
-                        
+
                     else {
                         // 正交吸附容差放大
                         if((data[v].mode === 'line' || (data[v].mode === 'arc' && data[v].arcState === 0)) && data[v].currentPath.length > 0) {
-                            // 只有按住键盘的 Shift 键，才会强制画水平或垂直的直线！否则绝对自由。
+                            // 只有按住键盘的 Shift 键,才会强制画水平或垂直的直线!否则绝对自由。
                             if (e.shiftKey) {
                                 const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                                if (Math.abs(cx - lastP.cx) < Math.abs(cy - lastP.cy)) cx = lastP.cx; 
+                                if (Math.abs(cx - lastP.cx) < Math.abs(cy - lastP.cy)) cx = lastP.cx;
                                 else cy = lastP.cy;
                             }
                         }
-                        
+
                         if(data[v].mode === 'rect') {
                             const w = parseFloat(document.getElementById(`rw-${v}`).value) || 100; const h = parseFloat(document.getElementById(`rh-${v}`).value) || 100;
                             data[v].entities.push({ id: ++entityIdCounter, type: 'rect', cx, cy, w, h });
@@ -666,30 +928,30 @@
                         }
                         renderCanvas(v);
                     }
-                } 
+                }
                 else if (e.button === 2) { // 右键绘制直线精确长度
                     if(data[v].mode !== 'line' || data[v].currentPath.length === 0) return;
                     const lastP = data[v].currentPath[data[v].currentPath.length - 1];
-                    
+
                     if (Math.abs(cx - lastP.cx) < 30 / data[v].zoom) cx = lastP.cx;
                     else if (Math.abs(cy - lastP.cy) < 30 / data[v].zoom) cy = lastP.cy;
-                    
+
                     let dx = cx - lastP.cx, dy = cy - lastP.cy; const len = Math.sqrt(dx*dx + dy*dy); if(len === 0) return;
-                    dx /= len; dy /= len; 
-                    
+                    dx /= len; dy /= len;
+
                     const distStr = prompt("输入沿此方向的精确长度 (mm):", "50");
                     if(distStr && !isNaN(parseFloat(distStr))) { data[v].currentPath.push({ type: 'line', cx: lastP.cx + dx * parseFloat(distStr), cy: lastP.cy + dy * parseFloat(distStr) }); renderCanvas(v); }
                 }
             });
 
-            // ================= 补丁 3：实时的弧度控制拉伸预览 =================
+            // ================= 补丁 3:实时的弧度控制拉伸预览 =================
         cv.addEventListener('mousemove', (e) => {
             let { cx, cy } = getCanvasCoords(v, e);
 
-            // 【新代码：支持整体移动与单节点移动】
+            // 【新代码:支持整体移动与单节点移动】
             if(data[v].mode === 'select' && dragState) {
                 let { cx, cy } = getCanvasCoords(v, e);
-                
+
                 // 如果点中了某个具体节点
                 if (dragState.pointIndex !== undefined) {
                     const pt = dragState.ent.pts[dragState.pointIndex];
@@ -698,7 +960,7 @@
                     // 否则整体移动
                     const dx = cx - dragState.startX;
                     const dy = cy - dragState.startY;
-                    
+
                     if (dragState.ent.type === 'path') {
                         dragState.ent.pts.forEach((p, i) => {
                             p.cx = dragState.origPts[i].cx + dx;
@@ -711,18 +973,18 @@
                 }
                 renderCanvas(v);
             }
-                
-            // 当处于弧度调整阶段 (arcState === 1) 时，实时重绘带控制线和动态虚线的画布
+
+            // 当处于弧度调整阶段 (arcState === 1) 时,实时重绘带控制线和动态虚线的画布
             else if (data[v].mode === 'arc' && data[v].arcState === 1) {
                 renderCanvas(v); // 先画底层稳定图元
-        
+
                 const cvEl = document.getElementById(`cv-${v}`);
                 const ctx = cvEl.getContext('2d');
                 const cPath = data[v].currentPath;
                 const startP = cPath[cPath.length - 1]; // 弧线起点
                 const endP = data[v].tempArcEnd;       // 弧线终点
 
-                // 绘制实时变化的二次贝塞尔弧线（黄色虚线）
+                // 绘制实时变化的二次贝塞尔弧线(黄色虚线)
                 ctx.strokeStyle = '#ff9900';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([6, 6]);
@@ -731,7 +993,7 @@
                 ctx.quadraticCurveTo(cx, cy, endP.cx, endP.cy); // 鼠标当前点作为控制点
                 ctx.stroke();
 
-                // 绘制控制柄辅助线（白色细线）
+                // 绘制控制柄辅助线(白色细线)
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
@@ -746,23 +1008,23 @@
             }
         });
             cv.addEventListener('mouseup', () => { dragState = null; });
-            
-            window.undoPath = (vv) => { 
-                if(data[vv].currentPath.length > 0) { 
-                    if(data[vv].arcState === 1) { data[vv].arcState = 0; data[vv].tempArcEnd = null; } 
-                    else { data[vv].currentPath.pop(); } 
-                    renderCanvas(vv); 
-                } 
+
+            window.undoPath = (vv) => {
+                if(data[vv].currentPath.length > 0) {
+                    if(data[vv].arcState === 1) { data[vv].arcState = 0; data[vv].tempArcEnd = null; }
+                    else { data[vv].currentPath.pop(); }
+                    renderCanvas(vv);
+                }
             };
-            
-            window.closePath = (vv) => { 
-                if(data[vv].currentPath.length > 2) { 
+
+            window.closePath = (vv) => {
+                if(data[vv].currentPath.length > 2) {
                     let sumX=0, sumY=0; data[vv].currentPath.forEach(p=>{sumX+=p.cx; sumY+=p.cy;});
                     data[vv].entities.push({ id: ++entityIdCounter, type: 'path', cx: sumX/data[vv].currentPath.length, cy: sumY/data[vv].currentPath.length, pts: [...data[vv].currentPath] });
-                    data[vv].currentPath = []; document.getElementById(`ms-${vv}`).click(); 
-                } 
+                    data[vv].currentPath = []; document.getElementById(`ms-${vv}`).click();
+                }
             };
-            
+
             window.deleteSelected = (vv) => { if(data[vv].selectedId !== null) { data[vv].entities = data[vv].entities.filter(e => e.id !== data[vv].selectedId); data[vv].selectedId = null; renderCanvas(vv); } };
             window.clearAll = (vv) => { data[vv].entities = []; data[vv].currentPath = []; data[vv].selectedId = null; renderCanvas(vv); };
             window.updateEntityParam = (vv) => {
@@ -778,34 +1040,35 @@
                     renderCanvas(vv);
                 }
             };
-            renderCanvas(v); 
+            renderCanvas(v);
         });
 
         // ================= 核心 3D 架构 =================
-        const scene = new THREE.Scene(); 
+        const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 10000);
         camera.position.set(800, 800, 800);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(document.getElementById('viewport').clientWidth, document.getElementById('viewport').clientHeight);
         document.getElementById('viewport').appendChild(renderer.domElement);
-        
+
         const controls = new OrbitControls(camera, renderer.domElement);
         const tControls = new TransformControls(camera, renderer.domElement);
-        
-        tControls.addEventListener('dragging-changed', (e) => { 
-            controls.enabled = !e.value; 
-            if(!e.value) saveSceneState(); 
+        tControls.setSize(0.7); // 缩小30%
+
+        tControls.addEventListener('dragging-changed', (e) => {
+            controls.enabled = !e.value;
+            if(!e.value) saveSceneState();
         });
-        tControls.addEventListener('change', () => { updateHUD(); }); 
+        tControls.addEventListener('change', () => { updateHUD(); });
         scene.add(tControls);
-        
+
         scene.add(new THREE.GridHelper(2000, 100, 0x222222, 0x111111));
-        scene.add(new THREE.AxesHelper(500)); 
+        scene.add(new THREE.AxesHelper(500));
         scene.add(new THREE.DirectionalLight(0xffffff, 0.8)).position.set(200, 500, 200);
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
         // 视口快捷导航控制
-        // ================= 补丁 1：智能视角居中与全景缩放 =================
+        // ================= 补丁 1:智能视角居中与全景缩放 =================
         window.setCameraView = (view) => {
             // 1. 计算当前场景中所有实体的总包围盒
             const bounds = new THREE.Box3();
@@ -815,7 +1078,7 @@
                 hasObjects = true;
             });
 
-            // 如果场景是空的，就围绕原点建立默认包围盒
+            // 如果场景是空的,就围绕原点建立默认包围盒
             if (!hasObjects) {
                 bounds.set(new THREE.Vector3(-200,-200,-200), new THREE.Vector3(200,200,200));
             }
@@ -825,7 +1088,7 @@
             bounds.getCenter(center);
             bounds.getSize(size);
 
-            // 2. 根据物体尺寸动态计算相机应当后退的距离，确保完全可见
+            // 2. 根据物体尺寸动态计算相机应当后退的距离,确保完全可见
             const maxDim = Math.max(size.x, size.y, size.z);
             const fov = camera.fov * (Math.PI / 180);
             let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
@@ -834,7 +1097,7 @@
             // 3. 让轨道控制器聚焦在物体的几何中心
             controls.target.copy(center);
 
-            // 4. 根据选定的视图方向，设定相机空间坐标
+            // 4. 根据选定的视图方向,设定相机空间坐标
             if (view === 'iso') {
                 camera.position.set(center.x + cameraZ, center.y + cameraZ, center.z + cameraZ);
             } else if (view === 'top') {
@@ -848,49 +1111,122 @@
             controls.update();
         };
 
-        const partsList = []; 
+        const partsList = [];
         let partCounter = 0;
         let selected3DPartId = null;
 
-        // --- 历史状态管理 ---
-        const sceneHistory = [];
-        let historyIndex = -1;
+        // --- Operation-based Undo/Redo (JSON serialization for deep clone) ---
+        const undoStack = [];
+        const redoStack = [];
+        let isUndoRedo = false;
 
         const updateHistoryUI = () => {
-            document.getElementById('btn-undo').disabled = historyIndex <= 0;
-            document.getElementById('btn-redo').disabled = historyIndex >= sceneHistory.length - 1;
+            const uBtn = document.getElementById('btn-undo');
+            const rBtn = document.getElementById('btn-redo');
+            if(uBtn) uBtn.disabled = undoStack.length <= 1;
+            if(rBtn) rBtn.disabled = redoStack.length === 0;
+        };
+
+        const meshToJSON = (mesh) => {
+            const obj = mesh.toJSON();
+            if(mesh.geometry && mesh.geometry.attributes) {
+                obj._pos  = mesh.geometry.attributes.position ? Array.from(mesh.geometry.attributes.position.array) : [];
+                obj._norm = mesh.geometry.attributes.normal   ? Array.from(mesh.geometry.attributes.normal.array)   : [];
+                obj._idx  = mesh.geometry.index             ? Array.from(mesh.geometry.index.array)             : [];
+            }
+            obj._mat = mesh.material ? {
+                color: mesh.material.color ? mesh.material.color.getHex() : 0xffffff,
+                roughness: mesh.material.roughness || 0.5,
+                metalness: mesh.material.metalness || 0.1,
+            } : null;
+            return obj;
+        };
+
+        const meshLoader = new THREE.ObjectLoader();
+
+        const loadMeshFromJSON = (obj) => {
+            return new Promise((resolve) => {
+                try {
+                    const loaded = meshLoader.parse(obj);
+                    if (loaded && loaded.isMesh) {
+                        // 成功解析,直接返回 mesh
+                        if(obj._mat && loaded.material) {
+                            loaded.material.color.setHex(obj._mat.color || 0xffffff);
+                            loaded.material.roughness = obj._mat.roughness || 0.5;
+                            loaded.material.metalness = obj._mat.metalness || 0.1;
+                        }
+                        resolve(loaded);
+                        return;
+                    }
+                } catch(e) {
+                    console.warn('meshLoader.parse failed, fallback to raw data rebuild', e);
+                }
+                // Fallback: Rebuild from raw data for CSG meshes
+                const geo = new THREE.BufferGeometry();
+                if(obj._pos && obj._pos.length > 0)  geo.setAttribute('position', new THREE.Float32BufferAttribute(obj._pos, 3));
+                if(obj._norm && obj._norm.length > 0) geo.setAttribute('normal',   new THREE.Float32BufferAttribute(obj._norm, 3));
+                if(obj._idx && obj._idx.length > 0)   geo.setIndex(obj._idx);
+                geo.computeVertexNormals();
+                const mat = obj._mat ? new THREE.MeshStandardMaterial({
+                    color: obj._mat.color || 0xffffff,
+                    roughness: obj._mat.roughness || 0.5,
+                    metalness: obj._mat.metalness || 0.1,
+                    side: THREE.DoubleSide,
+                }) : new THREE.MeshStandardMaterial({ side: THREE.DoubleSide });
+                const mesh = new THREE.Mesh(geo, mat);
+                if(obj.position) mesh.position.set(obj.position.x||0, obj.position.y||0, obj.position.z||0);
+                if(obj.rotation) mesh.rotation.set(obj.rotation.x||0, obj.rotation.y||0, obj.rotation.z||0);
+                if(obj.scale)    mesh.scale.set(obj.scale.x||1, obj.scale.y||1, obj.scale.z||1);
+                resolve(mesh);
+            });
         };
 
         const saveSceneState = () => {
-            if (historyIndex < sceneHistory.length - 1) sceneHistory.splice(historyIndex + 1);
-            const state = partsList.map(p => ({ id: p.id, name: p.name, mesh: p.mesh.clone() }));
-            sceneHistory.push(state);
-            if (sceneHistory.length > 30) sceneHistory.shift(); 
-            historyIndex = sceneHistory.length - 1;
+            if(isUndoRedo) return;
+            redoStack.length = 0;
+            const snap = partsList.map(p => ({ id: p.id, name: p.name, meshJSON: meshToJSON(p.mesh) }));
+            undoStack.push(snap);
+            if(undoStack.length > 60) undoStack.shift();
             updateHistoryUI();
         };
 
-        const loadState = (idx) => {
+        const restoreScene = async (snap) => {
             partsList.forEach(p => scene.remove(p.mesh));
             partsList.length = 0;
             tControls.detach();
             selected3DPartId = null;
             document.getElementById('dimension-section').style.display = 'none';
-            document.getElementById('precision-transform').style.display = 'none';
-
-            sceneHistory[idx].forEach(sp => {
-                const restoredMesh = sp.mesh.clone();
-                scene.add(restoredMesh);
-                partsList.push({ id: sp.id, name: sp.name, mesh: restoredMesh });
-            });
+            const ptEl = document.getElementById('precision-transform');
+            if(ptEl) ptEl.style.display = 'none';
+            for(const sp of snap) {
+                const mesh = await loadMeshFromJSON(sp.meshJSON);
+                mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),
+                    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
+                scene.add(mesh);
+                partsList.push({ id: sp.id, name: sp.name, mesh: mesh });
+            }
             refreshOutliner();
             updateHistoryUI();
         };
 
-        window.undo3D = () => { if(historyIndex > 0) { historyIndex--; loadState(historyIndex); } };
-        window.redo3D = () => { if(historyIndex < sceneHistory.length - 1) { historyIndex++; loadState(historyIndex); } };
+        window.undo3D = async () => {
+            if(undoStack.length <= 1) return;
+            const current = partsList.map(p => ({ id: p.id, name: p.name, meshJSON: meshToJSON(p.mesh) }));
+            redoStack.push(current);
+            undoStack.pop();
+            isUndoRedo = true;
+            await restoreScene(undoStack[undoStack.length - 1]);
+            isUndoRedo = false;
+        };
 
-        saveSceneState(); 
+        window.redo3D = async () => {
+            if(redoStack.length === 0) return;
+            isUndoRedo = true;
+            await restoreScene(redoStack.pop());
+            isUndoRedo = false;
+        };
+
+        saveSceneState();
 
         // --- 智能 UI 渲染与高亮机制 ---
         const updateEdgeColors = () => {
@@ -901,29 +1237,53 @@
                             child.material.color.setHex(0xff9900);
                             child.material.opacity = 0.9;
                         } else {
-                            child.material.color.setHex(0xffffff); 
+                            child.material.color.setHex(0xffffff);
                             child.material.opacity = 0.3;
                         }
                     }
                 });
             });
+
+            // 检查底部工具栏显示状态
+            setTimeout(() => {
+                const bottomToolbar = document.getElementById('bottom-toolbar');
+                if (bottomToolbar) {
+                    bottomToolbar.style.display = partsList.length > 0 ? 'flex' : 'none';
+                }
+            }, 100);
         };
 
         const refreshOutliner = () => {
             const outlinerPanel = document.getElementById('right-panel');
-            if (partsList.length === 0) { outlinerPanel.style.display = 'none'; return; } 
-            else { 
-                outlinerPanel.style.display = 'flex'; 
-                if(!document.getElementById('left-panel').classList.contains('collapsed')) window.dispatchEvent(new Event('resize')); 
+            if (partsList.length === 0) {
+                outlinerPanel.style.display = 'none';
+                // 隐藏底部工具栏
+                const bottomToolbar = document.getElementById('bottom-toolbar');
+                if (bottomToolbar) bottomToolbar.style.display = 'none';
+                // 隐藏折叠按钮
+                const toggleBtn = document.getElementById('right-panel-toggle');
+                if (toggleBtn) toggleBtn.style.display = 'none';
+                return;
+            }
+            else {
+                outlinerPanel.style.display = 'flex';
+                // 显示底部工具栏
+                const bottomToolbar = document.getElementById('bottom-toolbar');
+                if (bottomToolbar) bottomToolbar.style.display = 'flex';
+                // 显示折叠按钮
+                const toggleBtn = document.getElementById('right-panel-toggle');
+                if (toggleBtn) toggleBtn.style.display = '';
+
+                if(!document.getElementById('left-panel').classList.contains('collapsed')) window.dispatchEvent(new Event('resize'));
             }
 
             const container = document.getElementById('outliner-list');
             container.innerHTML = '';
-            
+
             partsList.forEach(part => {
                 const div = document.createElement('div');
                 div.className = `outliner-item ${part.id === selected3DPartId ? 'active' : ''}`;
-                
+
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = `cb-${part.id}`;
                 cb.onclick = (e) => e.stopPropagation();
 
@@ -937,17 +1297,17 @@
         };
 
         const select3DPart = (id) => {
-            selected3DPartId = id; 
+            selected3DPartId = id;
             refreshOutliner();
-            updateEdgeColors(); 
+            updateEdgeColors();
             const part = partsList.find(p => p.id === id);
-            if(part) { 
-                tControls.attach(part.mesh); 
+            if(part) {
+                tControls.attach(part.mesh);
                 document.getElementById('dimension-section').style.display = 'flex';
                 document.getElementById('precision-transform').style.display = 'flex';
-                updateHUD(); 
-            } else { 
-                tControls.detach(); 
+                updateHUD();
+            } else {
+                tControls.detach();
                 document.getElementById('dimension-section').style.display = 'none';
                 document.getElementById('precision-transform').style.display = 'none';
             }
@@ -958,15 +1318,15 @@
             if(!selected3DPartId) return;
             const part = partsList.find(p => p.id === selected3DPartId);
             if(!part) return;
-            
+
             const degrees = presetDeg !== null ? presetDeg : parseFloat(document.getElementById('custom-deg').value);
             if(isNaN(degrees)) return alert("请输入有效的度数");
-            
+
             const rad = THREE.MathUtils.degToRad(degrees);
             if(axis === 'x') part.mesh.rotateX(rad);
             if(axis === 'y') part.mesh.rotateY(rad);
             if(axis === 'z') part.mesh.rotateZ(rad);
-            
+
             updateHUD();
             saveSceneState();
         };
@@ -982,15 +1342,85 @@
             document.getElementById('dim-d').innerText = size.z.toFixed(2);
         };
 
+        // Tab switching for param-edit panel
+        window.showParamTab = (tab) => {
+            const panels = ['move','rotate','scale','copy','align'];
+            panels.forEach(t => {
+                const p = document.getElementById('panel-' + t);
+                const b = document.getElementById('tab-' + t);
+                if(!p || !b) return;
+                if(t === tab) {
+                    p.style.display = 'flex';
+                    b.style.background = '#2a2a2a';
+                    b.style.color = '#fff';
+                } else {
+                    p.style.display = 'none';
+                    b.style.background = '#333';
+                    b.style.color = '#aaa';
+                }
+            });
+        };
+
+        // Apply move from XYZ inputs
+        window.applyMoveXYZ = () => {
+            if(!selected3DPartId) return alert('请先选中实体');
+            const part = partsList.find(p => p.id === selected3DPartId);
+            if(!part) return;
+            const dx = parseFloat(document.getElementById('mv-x').value) || 0;
+            const dy = parseFloat(document.getElementById('mv-y').value) || 0;
+            const dz = parseFloat(document.getElementById('mv-z').value) || 0;
+            part.mesh.position.x += dx;
+            part.mesh.position.y += dy;
+            part.mesh.position.z += dz;
+            updateHUD();
+            saveSceneState();
+        };
+
+        // Apply rotation from XYZ inputs (degrees, any value)
+        window.applyRotateXYZ = () => {
+            if(!selected3DPartId) return alert('请先选中实体');
+            const part = partsList.find(p => p.id === selected3DPartId);
+            if(!part) return;
+            const rx = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rt-x').value) || 0);
+            const ry = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rt-y').value) || 0);
+            const rz = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rt-z').value) || 0);
+            part.mesh.rotation.x = rx;
+            part.mesh.rotation.y = ry;
+            part.mesh.rotation.z = rz;
+            updateHUD();
+            saveSceneState();
+        };
+
+        // Apply scale from XYZ inputs (percent: 50 = 50%, 100 = 100%)
+        window.applyScaleXYZ = () => {
+            if(!selected3DPartId) return alert('请先选中实体');
+            const part = partsList.find(p => p.id === selected3DPartId);
+            if(!part) return;
+            const sx = (parseFloat(document.getElementById('sc-x').value) || 100) / 100;
+            const sy = (parseFloat(document.getElementById('sc-y').value) || 100) / 100;
+            const sz = (parseFloat(document.getElementById('sc-z').value) || 100) / 100;
+            part.mesh.scale.x = sx;
+            part.mesh.scale.y = sy;
+            part.mesh.scale.z = sz;
+            updateHUD();
+            saveSceneState();
+        };
+
+        // Clone for copy tab
+        window.doCloneForCopy = () => { cloneSelectedPart(); };
+
         window.setTransformMode = (mode) => {
             tControls.setMode(mode);
-            document.getElementById('t-translate').className = mode === 'translate' ? 'active' : '';
-            document.getElementById('t-rotate').className = mode === 'rotate' ? 'active' : '';
-            document.getElementById('t-scale').className = mode === 'scale' ? 'active' : '';
+            const tBtn = document.getElementById('t-translate');
+            const rBtn = document.getElementById('t-rotate');
+            const sBtn = document.getElementById('t-scale');
+            if(tBtn) tBtn.className = mode === 'translate' ? 'active' : '';
+            if(rBtn) rBtn.className = mode === 'rotate' ? 'active' : '';
+            if(sBtn) sBtn.className = mode === 'scale' ? 'active' : '';
         };
 
         window.cloneSelectedPart = () => {
-            if(!selected3DPartId) return alert("请先选中要复制的实体！");
+            if(!selected3DPartId) return alert("请先选中要复制的实体!");
             const part = partsList.find(p => p.id === selected3DPartId);
             const newMesh = part.mesh.clone();
             newMesh.position.x += 50; newMesh.position.y += 50;
@@ -1006,8 +1436,16 @@
             if(!selected3DPartId) return;
             const index = partsList.findIndex(p => p.id === selected3DPartId);
             scene.remove(partsList[index].mesh); tControls.detach(); partsList.splice(index, 1);
-            selected3DPartId = null; 
+            selected3DPartId = null;
             document.getElementById('dimension-section').style.display = 'none';
+
+            // 检查是否还有3D实体,如果没有则隐藏底部工具栏
+            setTimeout(() => {
+                if (partsList.length === 0) {
+                    const bottomToolbar = document.getElementById('bottom-toolbar');
+                    if (bottomToolbar) bottomToolbar.style.display = 'none';
+                }
+            }, 100);
             document.getElementById('precision-transform').style.display = 'none';
             refreshOutliner();
             saveSceneState();
@@ -1015,52 +1453,55 @@
 
         const getCheckedParts = () => partsList.filter(p => document.getElementById(`cb-${p.id}`)?.checked);
 
-        // ================= 补丁 B-1：多实体精确对齐算法 =================
+        // ================= 补丁 B-1:多实体精确对齐算法 =================
         window.alignEntities = (axis, mode) => {
             const checked = getCheckedParts();
-            if(checked.length < 2) return alert("对齐失败：请在右侧列表中勾选至少 2 个实体（排第一的为主体）！");
-            
+            if(checked.length < 2) return alert("对齐失败:请在右侧列表中勾选至少 2 个实体(排第一的为主体)!");
+
             const targetMaster = checked[0].mesh; // 第一个勾选的为主体基準
             targetMaster.updateMatrixWorld(true);
             const masterBox = new THREE.Box3().setFromObject(targetMaster);
             const masterCenter = new THREE.Vector3(); masterBox.getCenter(masterCenter);
-            
+
             // 遍历其余选中的工具体进行空间对齐移动
             for(let i = 1; i < checked.length; i++) {
                 const toolMesh = checked[i].mesh;
                 toolMesh.updateMatrixWorld(true);
                 const toolBox = new THREE.Box3().setFromObject(toolMesh);
                 const toolCenter = new THREE.Vector3(); toolBox.getCenter(toolCenter);
-                
+
                 // 计算轴向位置差
                 if(axis === 'x' && mode === 'center') toolMesh.position.x += (masterCenter.x - toolCenter.x);
                 if(axis === 'z' && mode === 'center') toolMesh.position.z += (masterCenter.z - toolCenter.z);
+                if(axis === 'y' && mode === 'center') toolMesh.position.y += (masterCenter.y - toolCenter.y);
                 if(axis === 'y' && mode === 'top')    toolMesh.position.y += (masterBox.max.y - toolBox.max.y);
                 if(axis === 'y' && mode === 'bottom') toolMesh.position.y += (masterBox.min.y - toolBox.min.y);
+                if(axis === 'x' && mode === 'left')   toolMesh.position.x += (masterBox.min.x - toolBox.min.x);
+                if(axis === 'x' && mode === 'right')  toolMesh.position.x += (masterBox.max.x - toolBox.max.x);
             }
             tControls.detach(); select3DPart(checked[0].id); // 刷新句柄
             saveSceneState();
         };
-        
-        // ================= 补丁 B-2：空间镜面镜像克隆算法 =================
+
+        // ================= 补丁 B-2:空间镜面镜像克隆算法 =================
         window.mirrorSelectedEntity = (plane) => {
-            if(!selected3DPartId) return alert("请先在列表中点击选中需要镜像的母体零件！");
+            if(!selected3DPartId) return alert("请先在列表中点击选中需要镜像的母体零件!");
             const part = partsList.find(p => p.id === selected3DPartId);
-            
+
             // 克隆母体
             const mirroredMesh = part.mesh.clone();
             mirroredMesh.material = part.mesh.material.clone();
-            mirroredMesh.material.side = THREE.DoubleSide; // 强行启用双面，防止负缩放导致法线内翻隐形
-            
-            // 根据选定的镜面，对相应的轴向坐标和缩放尺寸进行取反变换
+            mirroredMesh.material.side = THREE.DoubleSide; // 强行启用双面,防止负缩放导致法线内翻隐形
+
+            // 根据选定的镜面,对相应的轴向坐标和缩放尺寸进行取反变换
             if(plane === 'yz') { mirroredMesh.scale.x *= -1; mirroredMesh.position.x *= -1; } // 关于左右镜像
             if(plane === 'xz') { mirroredMesh.scale.y *= -1; mirroredMesh.position.y *= -1; } // 关于上下镜像
             if(plane === 'xy') { mirroredMesh.scale.z *= -1; mirroredMesh.position.z *= -1; } // 关于前后镜像
-            
+
             // 重新附加上边缘高亮线
             const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mirroredMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
             mirroredMesh.add(edge);
-            
+
             const newId = `Part_${++partCounter}`;
             partsList.push({ id: newId, name: `${part.name}_镜像件`, mesh: mirroredMesh });
             scene.add(mirroredMesh);
@@ -1068,39 +1509,39 @@
             select3DPart(newId);
             saveSceneState();
         };
-        
+
         // ================= ★ 微米级容差防崩的布尔引擎 (Auto-Epsilon Rescue) =================
-        // ================= 补丁 4：烘焙级矩阵解耦防崩溃布尔引擎 =================
+        // ================= 补丁 4:烘焙级矩阵解耦防崩溃布尔引擎 =================
         window.execBoolean = (operation) => {
             const checked = getCheckedParts();
-            if(operation === 'union' && checked.length < 2) return alert("求和运算请至少勾选 2 个及以上的实体！");
-            if(operation !== 'union' && checked.length !== 2) return alert("求差/求交运算请严格勾选 2 个实体！");
-            
+            if(operation === 'union' && checked.length < 2) return alert("求和运算请至少勾选 2 个及以上的实体!");
+            if(operation !== 'union' && checked.length !== 2) return alert("求差/求交运算请严格勾选 2 个实体!");
+
             const loading = document.getElementById('loading');
             loading.style.display = 'flex'; // 开启遮罩
-            
+
             // 强制 UI 渲染遮罩后再进行重计算
             setTimeout(() => {
                 const safeHistoryIdx = historyIndex;
                 try {
                     saveSceneState();
                     checked.forEach(p => p.mesh.updateMatrixWorld(true));
-                    
+
                     const cleanAndExtractCSG = (part) => {
                         const tempGeo = part.mesh.geometry.clone();
                         tempGeo.applyMatrix4(part.mesh.matrixWorld);
                         const tempMesh = new THREE.Mesh(tempGeo);
                         return CSG.fromMesh(tempMesh);
                     };
-        
+
                     let resultCSG = cleanAndExtractCSG(checked[0]);
-        
+
                     if(operation === 'union') {
                         for (let i = 1; i < checked.length; i++) {
                             try {
                                 resultCSG = resultCSG.union(cleanAndExtractCSG(checked[i]));
                             } catch(e) {
-                                console.warn("单体求和失败，尝试微量偏移抢救...");
+                                console.warn("单体求和失败,尝试微量偏移抢救...");
                                 const rescueTool = checked[i].mesh.clone();
                                 rescueTool.position.addScalar(0.001);
                                 rescueTool.updateMatrixWorld(true);
@@ -1120,30 +1561,30 @@
                             resultCSG = (operation === 'subtract') ? resultCSG.subtract(csgB_R) : resultCSG.intersect(csgB_R);
                         }
                     }
-                    
+
                     if (!resultCSG || resultCSG.polygons.length === 0) throw new Error("ResultEmpty");
-        
-                    // 生成最终 Mesh 并清理旧零件（保持之前的代码...）
+
+                    // 生成最终 Mesh 并清理旧零件(保持之前的代码...)
                     const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide });
                     const newMesh = CSG.toMesh(resultCSG, new THREE.Matrix4(), mat);
                     newMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
-                    
+
                     checked.forEach(part => { scene.remove(part.mesh); partsList.splice(partsList.indexOf(part), 1); });
                     tControls.detach();
-                    
+
                     const newId = `Part_${++partCounter}`;
                     partsList.push({ id: newId, name: `布尔组件_${newId}`, mesh: newMesh });
                     scene.add(newMesh);
                     refreshOutliner();
                     select3DPart(newId);
                     saveSceneState();
-        
+
                 } catch(e) {
                     console.error("Critical Boolean Error:", e);
                     loadState(safeHistoryIdx);
-                    alert("⚠️ 运算崩溃：模型可能完全重合或拓扑逻辑冲突。已自动恢复。");
+                    alert("⚠️ 运算崩溃:模型可能完全重合或拓扑逻辑冲突。已自动恢复。");
                 } finally {
-                    loading.style.display = 'none'; // 强制关闭遮罩，无论成功还是报错
+                    loading.style.display = 'none'; // 强制关闭遮罩,无论成功还是报错
                 }
             }, 50);
         };
@@ -1180,48 +1621,49 @@
             return unionCSG;
         };
 
-        // ================= 补丁 2：防止空壳组件入库 ＆ 强化圆形扫掠旋转支持 =================
+        // ================= 补丁 2:防止空壳组件入库 & 强化圆形扫掠旋转支持 =================
         window.runBuild = () => {
             const strategy = document.getElementById('gen-strategy').value;
             const activeV = document.querySelector('.tab-content.active').id.replace('tab-', '');
             const d = parseFloat(document.getElementById('depth').value);
-            
+
             document.getElementById('loading').style.display = 'flex';
-            
+
             setTimeout(() => {
-                let newMesh = null; // 初始化为空，确保后面生成失败时绝对无法入库
+                let newMesh = null; // 初始化为空,确保后面生成失败时绝对无法入库
+                const mat = new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
+
                 try {
-                    const mat = new THREE.MeshStandardMaterial({ color: 0xdeff9a, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
-        
+
                     if (strategy === 'intersect') {
                         const csgF = buildViewCSG(data.front, d), csgT = buildViewCSG(data.top, d), csgS = buildViewCSG(data.side, d);
-                        if(!csgF || !csgT || !csgS) throw new Error("三轴交集需要主、俯、侧三个视图都至少画有一个闭合图元！");
+                        if(!csgF || !csgT || !csgS) throw new Error("三轴交集需要主、俯、侧三个视图都至少画有一个闭合图元!");
                         const mF = CSG.toMesh(csgF, new THREE.Matrix4(), mat); mF.updateMatrix();
                         const mT = CSG.toMesh(csgT, new THREE.Matrix4(), mat); mT.rotation.x = Math.PI/2; mT.updateMatrix();
                         const mS = CSG.toMesh(csgS, new THREE.Matrix4(), mat); mS.rotation.y = Math.PI/2; mS.updateMatrix();
                         let res = CSG.fromMesh(mF).intersect(CSG.fromMesh(mT)).intersect(CSG.fromMesh(mS));
                         newMesh = CSG.toMesh(res, new THREE.Matrix4(), mat);
-                    } 
+                    }
                     else if (strategy === 'extrude') {
                         const csgV = buildViewCSG(data[activeV], d);
-                        if(!csgV) throw new Error("当前画布没有任何图形！");
+                        if(!csgV) throw new Error("当前画布没有任何图形!");
                         newMesh = CSG.toMesh(csgV, new THREE.Matrix4(), mat);
                         if (activeV === 'top') newMesh.rotation.x = Math.PI/2;
                         if (activeV === 'side') newMesh.rotation.y = Math.PI/2;
-                    } 
+                    }
                     else if (strategy === 'revolve') {
-                        if(data[activeV].entities.length === 0) throw new Error("当前画布没有任何图形！");
+                        if(data[activeV].entities.length === 0) throw new Error("当前画布没有任何图形!");
                         const ent = data[activeV].entities[0];
                         const s = new THREE.Shape();
-                        
-                        // 🌟 核心修复：旋转逻辑全面适配椭圆及正圆参数 rx / ry
+
+                        // 🌟 核心修复:旋转逻辑全面适配椭圆及正圆参数 rx / ry
                         if(ent.type === 'circle') {
                             const rx = ent.rx !== undefined ? ent.rx : ent.r;
                             const ry = ent.ry !== undefined ? ent.ry : ent.r;
                             s.absellipse(tCoord(ent.cx), tCoordY(ent.cy), Math.round(rx*10)/10, Math.round(ry*10)/10, 0, Math.PI * 2, false);
-                        } else if(ent.type === 'rect') { 
-                            const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h; 
-                            s.moveTo(x-w/2,y-h/2); s.lineTo(x+w/2,y-h/2); s.lineTo(x+w/2,y+h/2); s.lineTo(x-w/2,y+h/2); s.closePath(); 
+                        } else if(ent.type === 'rect') {
+                            const x=tCoord(ent.cx), y=tCoordY(ent.cy), w=ent.w, h=ent.h;
+                            s.moveTo(x-w/2,y-h/2); s.lineTo(x+w/2,y-h/2); s.lineTo(x+w/2,y+h/2); s.lineTo(x-w/2,y+h/2); s.closePath();
                         } else {
                             s.moveTo(tCoord(ent.pts[0].cx), tCoordY(ent.pts[0].cy));
                             for(let i=1; i<ent.pts.length; i++) {
@@ -1230,46 +1672,172 @@
                             }
                             s.closePath();
                         }
-                        
+
                         const axis = document.querySelector('input[name="r-axis"]:checked').value;
                         const pts2D = s.getPoints(50);
                         let p3D = []; let rot = new THREE.Euler();
-                        if (activeV === 'front') { 
-                            if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(p.y, p.x)); rot.set(0, 0, -Math.PI/2); } 
-                            else if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(p.x, p.y)); rot.set(0, 0, 0); } 
+                        if (activeV === 'front') {
+                            if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(p.y, p.x)); rot.set(0, 0, -Math.PI/2); }
+                            else if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(p.x, p.y)); rot.set(0, 0, 0); }
                             else throw new Error("主视图只能绕X或Y轴旋转");
-                        } else if (activeV === 'top') { 
-                            if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(-p.y, p.x)); rot.set(0, 0, -Math.PI/2); } 
-                            else if (axis === 'Z') { p3D = pts2D.map(p => new THREE.Vector2(p.x, -p.y)); rot.set(Math.PI/2, 0, 0); } 
-                        } else if (activeV === 'side') { 
-                            if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(-p.x, p.y)); rot.set(0, 0, 0); } 
-                            else if (axis === 'Z') { p3D = pts2D.map(p => new THREE.Vector2(p.y, -p.x)); rot.set(Math.PI/2, 0, 0); } 
+                        } else if (activeV === 'top') {
+                            if (axis === 'X') { p3D = pts2D.map(p => new THREE.Vector2(-p.y, p.x)); rot.set(0, 0, -Math.PI/2); }
+                            else if (axis === 'Z') { p3D = pts2D.map(p => new THREE.Vector2(p.x, -p.y)); rot.set(Math.PI/2, 0, 0); }
+                        } else if (activeV === 'side') {
+                            if (axis === 'Y') { p3D = pts2D.map(p => new THREE.Vector2(-p.x, p.y)); rot.set(0, 0, 0); }
+                            else if (axis === 'Z') { p3D = pts2D.map(p => new THREE.Vector2(p.y, -p.x)); rot.set(Math.PI/2, 0, 0); }
                         }
                         newMesh = new THREE.Mesh(new THREE.LatheGeometry(p3D, 64), mat);
                         newMesh.rotation.copy(rot);
-                    }
-                    // 扫掠分支（strategy === 'sweep'）保持上一版本的修正即可...
-                    
-                    // 🌟 核心拦截机制：只有物理网格真正实例化成功后，才允许向场景及列表灌入数据！
+                    }                                        // ================= 沿路径扫掠模式 =================
+                                        else if (strategy === 'sweep') {
+                    // Define material for sweep operation
+                    const mat = new THREE.MeshStandardMaterial({ color: 0xff8800, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
+                                            // 容错 1:检查主视和侧视是否都有绘制内容
+                                            // 注意:优先读取 currentPath,如果为空则读取 entities 中的任何实体
+
+                                            // 主视图(截面)
+                                            let mainPtsSource = null;
+                                            let mainEntityType = null;
+
+                                            if (data['front'].currentPath && data['front'].currentPath.length > 0) {
+                                                // 情况1:有 currentPath(用户还没点击"闭合为实体")
+                                                mainPtsSource = data['front'].currentPath;
+                                                mainEntityType = 'path';
+                                            } else if (data['front'].entities && data['front'].entities.length > 0) {
+                                                // 情况2:有 entities(用户已点击"闭合为实体")
+                                                // 取最后一个实体
+                                                const lastEntity = data['front'].entities[data['front'].entities.length - 1];
+                                                mainEntityType = lastEntity.type;
+
+                                                if (lastEntity.type === 'path' && lastEntity.pts) {
+                                                    mainPtsSource = lastEntity.pts;
+                                                } else if (lastEntity.type === 'rect') {
+                                                    // 从 rect 生成4个点
+                                                    const { cx, cy, w, h } = lastEntity;
+                                                    mainPtsSource = [
+                                                        { cx: cx - w/2, cy: cy - h/2 },
+                                                        { cx: cx + w/2, cy: cy - h/2 },
+                                                        { cx: cx + w/2, cy: cy + h/2 },
+                                                        { cx: cx - w/2, cy: cy + h/2 }
+                                                    ];
+                                                } else if (lastEntity.type === 'circle') {
+                                                    // 从 circle 生成多个点(近似椭圆)
+                                                    const { cx, cy, rx, ry } = lastEntity;
+                                                    mainPtsSource = [];
+                                                    for (let i = 0; i <= 32; i++) {
+                                                        const angle = (i / 32) * 2 * Math.PI;
+                                                        mainPtsSource.push({
+                                                            cx: cx + rx * Math.cos(angle),
+                                                            cy: cy + ry * Math.sin(angle)
+                                                        });
+                                                    }
+                                                }
+                                            }
+
+                                            if (!mainPtsSource || mainPtsSource.length === 0) {
+                                                throw new Error("主视图(截面)为空!\n\n请按以下步骤操作:\n1. 切换到【主视 (XY)】标签页\n2. 选择【线段】工具绘制截面形状\n3. 绘制完成后点击【✓ 闭合为实体】按钮\n4. 再执行扫掠。");
+                                            }
+
+                                            // 侧视图(路径)
+                                            let sidePtsSource = null;
+                                            if (data['side'].currentPath && data['side'].currentPath.length > 0) {
+                                                sidePtsSource = data['side'].currentPath;
+                                            } else {
+                                                const sidePathEntity = data['side'].entities.filter(e => e.type === 'path').pop();
+                                                if (sidePathEntity && sidePathEntity.pts && sidePathEntity.pts.length > 0) {
+                                                    sidePtsSource = sidePathEntity.pts;
+                                                }
+                                            }
+
+                                            if (!sidePtsSource || sidePtsSource.length === 0) {
+                                                throw new Error("侧视图(路径)为空!请先在侧视图中绘制扫掠路径。");
+                                            }
+
+                                            // 从主视提取截面形状(Shape)
+                                            const mainPts = mainPtsSource.map(p => ({ x: (p.cx - 250) / 2, y: -(p.cy - 150) / 2 }));
+                                            if (mainPts.length < 3) {
+                                                throw new Error("截面点数不足!至少需要3个点才能形成封闭截面。");
+                                            }
+
+                                            // 创建 Shape(自动闭合)
+                                            const shape = new THREE.Shape();
+                                            shape.moveTo(mainPts[0].x, mainPts[0].y);
+                                            for (let i = 1; i < mainPts.length; i++) {
+                                                shape.lineTo(mainPts[i].x, mainPts[i].y);
+                                            }
+                                            shape.closePath();
+
+                                            // 从容错:检查截面面积是否有效
+                                            const area = THREE.ShapeUtils.area(shape.getPoints());
+                                            if (Math.abs(area) < 1e-6) {
+                                                throw new Error("截面面积过小或自交!请重新绘制有效截面。");
+                                            }
+
+                                            // 从侧视提取路径点并转换为3D路径
+                                            const sidePts = sidePtsSource.map(p => ({ x: (p.cx - 250) / 2, y: -(p.cy - 150) / 2 }));
+                                            if (sidePts.length < 2) {
+                                                throw new Error("路径点数不足!至少需要2个点才能形成扫掠路径。");
+                                            }
+
+                                            // 将2D路径点转换为3D空间点(Y坐标作为Z轴高度)
+                                            const path3D = sidePts.map(p => new THREE.Vector3(p.x, 0, p.y));
+
+                                            // 容错 2:检查路径长度
+                                            let totalLen = 0;
+                                            for (let i = 1; i < path3D.length; i++) {
+                                                totalLen += path3D[i].distanceTo(path3D[i-1]);
+                                            }
+                                            if (totalLen < 0.01) {
+                                                throw new Error("扫掠路径长度过小!请绘制更长的路径。");
+                                            }
+
+                                            // 创建平滑的3D路径(使用 CatmullRomCurve3)
+                                            const curve = new THREE.CatmullRomCurve3(path3D, false, 'centripetal');
+
+                                            // 容错 3:使用 ExtrudeGeometry 沿路径扫掠
+                                            try {
+                                                const extOpts = {
+                                                    steps: Math.max(50, Math.floor(totalLen * 20)),  // 根据路径长度动态调整步数
+                                                    depth: 1,  // 这个参数不会被使用(因为指定了 extradePath)
+                                                    bevelEnabled: false,
+                                                    extrudePath: curve
+                                                };
+                                                const geo = new THREE.ExtrudeGeometry(shape, extOpts);
+
+                                                // 容错 4:检查生成的几何体是否有效
+                                                if (!geo || geo.attributes.position.count === 0) {
+                                                    throw new Error("扫掠失败:生成的几何体为空!");
+                                                }
+
+                                                newMesh = new THREE.Mesh(geo, mat);
+                                                console.log('[扫掠成功] 截面点数:', mainPts.length, '路径点数:', sidePts.length, '路径长度:', totalLen.toFixed(2));
+                                            } catch(e) {
+                                                console.error('[扫掠错误]', e);
+                                                throw new Error("扫掠失败:" + (e.message || "几何体计算错误,请检查截面和路径是否合法。"));
+                                            }
+                                        }
+
+                                        // 🌟 核心拦截机制:只有物理网格真正实例化成功后,才允许向场景及列表灌入数据!
                     if (newMesh) {
                         const edge = new THREE.LineSegments(new THREE.EdgesGeometry(newMesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
-                        newMesh.add(edge); 
-                        
+                        newMesh.add(edge);
+
                         const newId = `Part_${++partCounter}`;
                         const strategyName = strategy === 'intersect' ? '交集件' : (strategy === 'extrude' ? '拉伸件' : (strategy === 'revolve' ? '旋转件' : '扫掠件'));
-                        
-                        // 只有在这里才写入列表，彻底杜绝僵尸零件空壳
+
+                        // 只有在这里才写入列表,彻底杜绝僵尸零件空壳
                         partsList.push({ id: newId, name: `${strategyName}_${newId}`, mesh: newMesh });
                         scene.add(newMesh);
-                        
+
                         refreshOutliner();
                         select3DPart(newId);
                         saveSceneState();
                     }
-        
-                } catch(e) { 
-                    console.error(e); 
-                    alert("⚠️ 特征成型中止：\n" + (e.message || "几何计算发生拓扑死锁。")); 
+
+                } catch(e) {
+                    console.error(e);
+                    alert("⚠️ 特征成型中止:\n" + (e.message || "几何计算发生拓扑死锁。"));
                 } finally {
                     document.getElementById('loading').style.display = 'none';
                 }
@@ -1277,12 +1845,12 @@
         };
 
         window.exportSelectedSTL = () => {
-            if(!selected3DPartId) return alert("请先在右侧列表中勾选并点击你要导出的实体！");
+            if(!selected3DPartId) return alert("请先在右侧列表中勾选并点击你要导出的实体!");
             const part = partsList.find(p => p.id === selected3DPartId);
             const name = prompt("STL 文件名:", part.name);
             if(name) {
                 const blob = new Blob([new STLExporter().parse(part.mesh)], { type: 'text/plain' });
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
                 a.download = `${name}.stl`; a.click();
             }
         };
@@ -1290,68 +1858,289 @@
         function ani() { requestAnimationFrame(ani); controls.update(); renderer.render(scene, camera); }
         ani();
 
-        // ================= 补丁 3：本地存盘与预览提取 =================
+        // Snapshot: persisted to localStorage (survives page refresh)
         window.saveProjectToLocal = () => {
-            const name = prompt("请输入工程名称:", "我的设计_" + new Date().toLocaleTimeString());
+            const name = prompt("Snapshot name:", "MyDesign_" + new Date().toLocaleTimeString());
             if(!name) return;
-        
-            // 1. 抓取 3D 视图截图作为预览
             renderer.render(scene, camera);
             const thumb = renderer.domElement.toDataURL("image/jpeg", 0.5);
-        
-            // 2. 序列化零件（此处简化，实际生产建议保存 2D data 和零件位置参数）
-            // 为了不卡死 localStorage，我们仅演示结构化存档。
-            const projectData = {
-                name: name,
-                time: new Date().toLocaleString(),
-                thumb: thumb,
-                sceneState: partsList.map(p => ({
-                    name: p.name,
-                    position: p.mesh.position.toArray(),
-                    rotation: p.mesh.rotation.toArray(),
-                    scale: p.mesh.scale.toArray(),
-                    // 提示：复杂布尔后的 Geometry 很大，此处通常保存“生成历史序列”而非网格
-                }))
+            const snapshot = {
+                name: name, time: new Date().toISOString(), thumb: thumb,
+                parts: partsList.map(p => ({ id: p.id, name: p.name, meshJSON: meshToJSON(p.mesh) }))
             };
-        
-            const savedProjects = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]");
-            savedProjects.unshift(projectData);
-            localStorage.setItem("APEX_PROJECTS", JSON.stringify(savedProjects.slice(0, 10))); // 仅保留最近10个
-            renderProjectList();
+            const saved = JSON.parse(localStorage.getItem("APEX_SNAPSHOTS") || "[]");
+            saved.unshift(snapshot);
+            localStorage.setItem("APEX_SNAPSHOTS", JSON.stringify(saved.slice(0, 20)));
+            alert("Snapshot saved: " + name);
+            renderSnapshotList();
         };
-        
-        // ================= 补丁 3：工程存盘与弹性初始化容错 =================
-        window.renderProjectList = () => {
+
+        window.deleteSnapshot = (idx) => {
+            const saved = JSON.parse(localStorage.getItem("APEX_SNAPSHOTS") || "[]");
+            saved.splice(idx, 1);
+            localStorage.setItem("APEX_SNAPSHOTS", JSON.stringify(saved));
+            renderSnapshotList();
+        };
+
+        window.loadSnapshot = async (idx) => {
+            const saved = JSON.parse(localStorage.getItem("APEX_SNAPSHOTS") || "[]");
+            if(!saved[idx]) return;
+            if(!confirm("Load snapshot '" + saved[idx].name + "'? Current scene will be replaced.")) return;
+            redoStack.length = 0;
+            partsList.forEach(p => scene.remove(p.mesh));
+            partsList.length = 0;
+            for(const sp of saved[idx].parts) {
+                const mesh = await loadMeshFromJSON(sp.meshJSON);
+                mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),
+                    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
+                scene.add(mesh);
+                partsList.push({ id: sp.id, name: sp.name, mesh: mesh });
+            }
+            saveSceneState();
+            refreshOutliner();
+            alert("Loaded: " + saved[idx].name);
+        };
+
+        window.renderSnapshotList = () => {
             const container = document.getElementById('project-list-container');
-            if(!container) return; // 🌟 关键防御线：如果 DOM 节点由于折叠还未渲染出来，静默退出防止页面代码挂起
-            
-            const projects = JSON.parse(localStorage.getItem("APEX_PROJECTS") || "[]");
-            if(projects.length === 0) {
-                container.innerHTML = `<div style="font-size:11px; color:#555; text-align:center; padding:10px;">暂无本地快照，请点击上方[💾存盘]</div>`;
+            if(!container) return;
+            const saved = JSON.parse(localStorage.getItem("APEX_SNAPSHOTS") || "[]");
+            if(saved.length === 0) {
+                container.innerHTML = '<div style="font-size:11px; color:#555; text-align:center; padding:10px;">No snapshots yet. Click [Save] to create one.</div>';
                 return;
             }
-            
-            container.innerHTML = projects.map((p, idx) => `
-                <div class="outliner-item" style="gap:10px; padding:5px; margin-bottom:4px; align-items:center;" onclick="alert('快照读取模块已挂载，正在反序列化网格快照...')">
-                    <img src="${p.thumb}" style="width:40px; height:40px; border-radius:4px; border:1px solid #444; object-fit:cover;">
-                    <div style="flex:1; overflow:hidden;">
-                        <div style="font-size:11px; font-weight:bold; color:#deff9a; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${p.name}</div>
-                        <div style="font-size:9px; color:#555;">${p.time}</div>
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = saved.map((p, idx) =>
+                `<div class="snap-item" style="display:flex; gap:6px; padding:5px; margin-bottom:4px; align-items:center; border-radius:4px; cursor:pointer;" onmouseover="this.style.background='#222'" onmouseout="this.style.background=''" onclick="loadSnapshot(' + idx + ')">` +
+                    '<img src="' + p.thumb + '" style="width:40px; height:40px; border-radius:4px; border:1px solid #444; object-fit:cover; flex-shrink:0;">' +
+                    '<div style="flex:1; overflow:hidden;">' +
+                        '<div style="font-size:11px; font-weight:bold; color:#deff9a; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">' + p.name + '</div>' +
+                        '<div style="font-size:9px; color:#555;">' + new Date(p.time).toLocaleString() + '</div>' +
+                    '</div>' +
+                    '<button onclick="event.stopPropagation(); deleteSnapshot(' + idx + ')" style="padding:2px 7px; background:#633; color:#fff; border:1px solid #744; border-radius:3px; cursor:pointer; font-size:9px; flex-shrink:0;">X</button>' +
+                '</div>'
+            ).join('');
         };
-        
-        // 初始化载入列表
-        setTimeout(renderProjectList, 1000);
-        
-        window.addEventListener('resize', () => {
+
+        ;
+
+        // ================= 补丁 3:工程存盘与弹性初始化容错 =================
+
+
+        // ================= File System Access API: Save / Open =================
+        let projectFileHandle = null;
+
+        // ─── IndexedDB: persist last-used directory handle ───
+        const DB_NAME = 'apex_dir_db';
+        const DB_VER  = 1;
+        const STORE   = 'handles';
+        const KEY     = 'lastDir';
+
+        function openDB() {
+            return new Promise((res, rej) => {
+                const req = indexedDB.open(DB_NAME, DB_VER);
+                req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+                req.onsuccess = e => res(e.target.result);
+                req.onerror   = e => rej(e.target.error);
+            });
+        }
+        async function saveLastDir(dirHandle) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).put(dirHandle, KEY);
+                await new Promise((res, rej) => {
+                    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+                });
+                db.close();
+            } catch(e) { console.warn('saveLastDir failed:', e); }
+        }
+        async function getLastDir() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE, 'readonly');
+                const req = tx.objectStore(STORE).get(KEY);
+                return new Promise((res, rej) => {
+                    req.onsuccess = () => { db.close(); res(req.result || 'savings'); };
+                    req.onerror   = () => { db.close(); rej(req.error); };
+                });
+            } catch(e) { return 'savings'; }
+        }
+
+        window.saveProjectToFile = async () => {
+            const scenesnap = partsList.map(p => ({
+                id: p.id, name: p.name, meshJSON: meshToJSON(p.mesh)
+            }));
+            const fileData = JSON.stringify({ version: 1, parts: scenesnap, time: new Date().toISOString() }, null, 2);
+            const blob = new Blob([fileData], { type: 'application/json' });
+            if(projectFileHandle) {
+                try {
+                    const writable = await projectFileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    alert("Saved: " + projectFileHandle.name); return;
+                } catch(e) { projectFileHandle = null; }
+            }
+            try {
+                const lastDir = await getLastDir();
+                projectFileHandle = await window.showSaveFilePicker({
+                    startIn: lastDir,
+                    suggestedName: projectFileHandle ? projectFileHandle.name : 'apex_project.json',
+                    types: [{ description: 'APEX Project', acceptedTypes: [{ mimeType: 'application/json' }] }]
+                });
+                await saveLastDir(projectFileHandle); // remember this folder
+                const writable = await projectFileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                alert("Saved: " + projectFileHandle.name);
+            } catch(e) { if(e.name !== 'AbortError') console.error(e); }
+        };
+
+        window.openProjectFromFile = async () => {
+            try {
+                const [handle] = await window.showOpenFilePicker({
+                    types: [{ description: 'APEX Project', acceptedTypes: [{ mimeType: 'application/json' }] }]
+                });
+                const file = await handle.getFile();
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if(!data.parts) throw new Error("Invalid project file");
+                if(!confirm("Open project '" + handle.name + "'? Current scene will be replaced.")) return;
+                redoStack.length = 0;
+                partsList.forEach(p => scene.remove(p.mesh));
+                partsList.length = 0;
+                for(const sp of data.parts) {
+                    const mesh = await loadMeshFromJSON(sp.meshJSON);
+                    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),
+                        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
+                    scene.add(mesh);
+                    partsList.push({ id: sp.id, name: sp.name, mesh: mesh });
+                }
+                projectFileHandle = handle;
+                try {
+                    const parent = await handle.getParent();
+                    await parent.queryPermission({ mode: 'readwrite' });
+                    await saveLastDir(parent);
+                } catch(e) { /* permission denied - not critical */ }
+                saveSceneState();
+                refreshOutliner();
+                alert("Opened: " + handle.name);
+            } catch(e) { if(e.name !== 'AbortError') alert("Open failed: " + e.message); }
+        };
+window.addEventListener('resize', () => {
             const container = document.getElementById('center-viewport');
             const w = container.clientWidth, h = container.clientHeight;
             camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
         });
 
-        // ================= 补丁 G-1：修正扫掠的归零中心与 centripetal 类型 =================
+        // ================= 补丁 G-1:修正扫掠的归零中心与 centripetal 类型 =================
+
+
+// 缩放以适所有实体
+function zoomToFit() {
+    if (!scene || !camera || !controls) return;
+
+    const box = new THREE.Box3();
+    scene.traverse((obj) => {
+        if (obj.isMesh) {
+            const objBox = new THREE.Box3().setFromObject(obj);
+            box.union(objBox);
+        }
+    });
+
+    if (box.isEmpty()) return;
+
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    let cameraZ = Math.abs(maxDim / Math.sin(fov / 2));
+
+    // 更新相机位置
+    camera.position.set(center.x, center.y, center.z + cameraZ);
+    camera.lookAt(center);
+    camera.updateProjectionMatrix();
+
+    // 更新控制器
+    controls.target.copy(center);
+    controls.update();
+
+    console.log('📐 已适应所有实体');
+}
+
+// 切换右侧面板折叠/展开
+function toggleRightPanel() {
+    const panel = document.getElementById('right-panel');
+    const btn = document.getElementById('right-panel-toggle');
+    if (!panel || !btn) return;
+    
+    panel.classList.toggle('collapsed');
+    const isCollapsed = panel.classList.contains('collapsed');
+    
+    // 更新按钮文本
+    btn.innerHTML = isCollapsed ? '▶<br>展<br>开' : '◀<br>收<br>起';
+    
+    // 更新按钮位置（按钮是 position: fixed，right 相对于视口）
+    if (isCollapsed) {
+        btn.style.right = '0';  // 折叠时，在视口右边界
+    } else {
+        btn.style.right = '340px';  // 展开时，在面板左侧
+    }
+    
+    console.log('右侧面板:', isCollapsed ? '已折叠' : '已展开');
+}
+
+// 监听右侧面板显示状态,显示折叠按钮
+const rightPanelObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            const panel = mutation.target;
+            const toggleBtn = panel.querySelector('.right-panel-toggle');
+            if (toggleBtn) {
+                // 只在面板显示时显示折叠按钮
+                toggleBtn.style.display = panel.style.display !== 'none' ? 'flex' : 'none';
+            }
+        }
+    });
+});
+
+const rightPanel = document.getElementById('right-panel');
+if (rightPanel) {
+    rightPanelObserver.observe(rightPanel, { attributes: true });
+}
+
+
+
+    // 初始化右侧面板折叠按钮
+    function updateRightPanelToggleVisibility() {
+        const btn = document.getElementById('right-panel-toggle');
+        if (!btn) return;
+
+        // 检查是否有3D实体(检查 partsList 或 scene.children)
+        const hasEntities = (typeof partsList !== 'undefined' && partsList.length > 0) ||
+                          (typeof scene !== 'undefined' && scene.children.some(c => c.isMesh));
+
+        if (hasEntities) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
+    }
+
+    // 页面加载后初始化
+    updateRightPanelToggleVisibility();
+
+    // 监听 partsList 变化(如果存在)
+    if (typeof partsList !== 'undefined') {
+        const originalPush = partsList.push;
+        partsList.push = function(...items) {
+            const result = originalPush.apply(this, items);
+            updateRightPanelToggleVisibility();
+            return result;
+        };
+    }
+
     </script>
+    <div id="right-panel-toggle" onclick="toggleRightPanel()" title="收起/展开装配管理器"></div>
+
 </body>
 </html>
